@@ -1,0 +1,6 @@
+{
+  "name": "ShasthoSathi AI",
+  "description": "Bilingual (English & Bangla) Smart Health Companion & Medicine Reminder Android app featuring AI Symptom Organizer, AI Prescription Reader, Smart Medicine Scheduler, Bangladeshi Local Food Diet Planner, and Mental Wellness Journal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

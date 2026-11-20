@@ -1,0 +1,345 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global security helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isBoundedStringList(arr, maxLen) {
+      return arr is list && arr.size() <= maxLen && (arr.size() == 0 || arr[0] is string);
+    }
+
+    // --- Validation Helpers (Anti-Update-Gap) ---
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             data.age is int && data.age >= 1 && data.age <= 120 &&
+             data.language in ['EN', 'BN'] &&
+             (!('location' in data) || (data.location is string && data.location.size() <= 120)) &&
+             (!('emergencyNumber' in data) || (data.emergencyNumber is string && data.emergencyNumber.size() <= 30)) &&
+             (!('healthConditions' in data) || isBoundedStringList(data.healthConditions, 10)) &&
+             (!('dietaryPreference' in data) || (data.dietaryPreference is string && data.dietaryPreference.size() <= 60)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidMedicineReminder(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.medicineName is string && data.medicineName.size() >= 1 && data.medicineName.size() <= 120 &&
+             data.dosage is string && data.dosage.size() >= 1 && data.dosage.size() <= 80 &&
+             data.timeSlot in ['MORNING', 'NOON', 'NIGHT'] &&
+             data.scheduledTime is string && data.scheduledTime.size() >= 1 && data.scheduledTime.size() <= 20 &&
+             data.mealTiming in ['Before Meal', 'After Meal', 'Anytime'] &&
+             data.durationDays is int && data.durationDays >= 1 && data.durationDays <= 365 &&
+             data.sourceType in ['AUTO_RX', 'MANUAL'] &&
+             data.active is bool &&
+             data.todayStatus in ['PENDING', 'TAKEN', 'SNOOZED', 'SKIPPED'] &&
+             data.lastActionDate is string && data.lastActionDate.size() <= 20 &&
+             data.notes is string && data.notes.size() <= 300 &&
+             (!('ringtoneUri' in data) || (data.ringtoneUri is string && data.ringtoneUri.size() <= 400)) &&
+             (!('ringtoneName' in data) || (data.ringtoneName is string && data.ringtoneName.size() <= 100)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAdherenceLog(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.reminderId is string && data.reminderId.size() >= 1 && data.reminderId.size() <= 128 &&
+             data.medicineName is string && data.medicineName.size() >= 1 && data.medicineName.size() <= 120 &&
+             data.action in ['TAKEN', 'SNOOZED', 'SKIPPED'] &&
+             data.dateKey is string && data.dateKey.size() >= 1 && data.dateKey.size() <= 20 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidDoctorBrief(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.language in ['EN', 'BN'] &&
+             data.chiefSymptoms is string && data.chiefSymptoms.size() >= 1 && data.chiefSymptoms.size() <= 1000 &&
+             data.severityAndContext is string && data.severityAndContext.size() >= 1 && data.severityAndContext.size() <= 1000 &&
+             isBoundedStringList(data.questionsForDoctor, 15) &&
+             data.redFlagWarning is string && data.redFlagWarning.size() <= 600 &&
+             data.urgentCareAdvised is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidDietPlan(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.language in ['EN', 'BN'] &&
+             data.age is int && data.age >= 1 && data.age <= 120 &&
+             isBoundedStringList(data.conditions, 10) &&
+             data.preference is string && data.preference.size() >= 1 && data.preference.size() <= 60 &&
+             data.breakfastTitle is string && data.breakfastTitle.size() >= 1 && data.breakfastTitle.size() <= 200 &&
+             data.breakfastPortion is string && data.breakfastPortion.size() >= 1 && data.breakfastPortion.size() <= 300 &&
+             data.breakfastRationale is string && data.breakfastRationale.size() >= 1 && data.breakfastRationale.size() <= 400 &&
+             data.lunchTitle is string && data.lunchTitle.size() >= 1 && data.lunchTitle.size() <= 200 &&
+             data.lunchPortion is string && data.lunchPortion.size() >= 1 && data.lunchPortion.size() <= 300 &&
+             data.lunchRationale is string && data.lunchRationale.size() >= 1 && data.lunchRationale.size() <= 400 &&
+             data.snackTitle is string && data.snackTitle.size() >= 1 && data.snackTitle.size() <= 200 &&
+             data.snackPortion is string && data.snackPortion.size() >= 1 && data.snackPortion.size() <= 300 &&
+             data.snackRationale is string && data.snackRationale.size() >= 1 && data.snackRationale.size() <= 400 &&
+             data.dinnerTitle is string && data.dinnerTitle.size() >= 1 && data.dinnerTitle.size() <= 200 &&
+             data.dinnerPortion is string && data.dinnerPortion.size() >= 1 && data.dinnerPortion.size() <= 300 &&
+             data.dinnerRationale is string && data.dinnerRationale.size() >= 1 && data.dinnerRationale.size() <= 400 &&
+             isBoundedStringList(data.foodsToPrioritize, 15) &&
+             isBoundedStringList(data.foodsToLimit, 15) &&
+             data.hydrationTip is string && data.hydrationTip.size() >= 1 && data.hydrationTip.size() <= 400 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidMoodEntry(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.language in ['EN', 'BN'] &&
+             data.selectedMood in ['HAPPY', 'CALM', 'TIRED', 'STRESSED', 'SAD'] &&
+             data.journalText is string && data.journalText.size() >= 1 && data.journalText.size() <= 2000 &&
+             data.detectedMoodTag is string && data.detectedMoodTag.size() >= 1 && data.detectedMoodTag.size() <= 60 &&
+             data.moodScore is int && data.moodScore >= 1 && data.moodScore <= 5 &&
+             data.aiReflection is string && data.aiReflection.size() >= 1 && data.aiReflection.size() <= 1200 &&
+             data.microAction is string && data.microAction.size() >= 1 && data.microAction.size() <= 400 &&
+             data.supportNote is string && data.supportNote.size() <= 500 &&
+             data.dateLabel is string && data.dateLabel.size() >= 1 && data.dateLabel.size() <= 30 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidMedicalReport(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.serialNumber is int && data.serialNumber >= 1 && data.serialNumber <= 100000 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 160 &&
+             data.category in ['LAB_TEST', 'PRESCRIPTION', 'IMAGING', 'DOCTOR_NOTE', 'OTHER'] &&
+             data.doctorOrLab is string && data.doctorOrLab.size() <= 120 &&
+             data.reportDate is string && data.reportDate.size() >= 1 && data.reportDate.size() <= 30 &&
+             data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 600 &&
+             data.details is string && data.details.size() <= 4000 &&
+             (!('attachmentType' in data) || data.attachmentType in ['TEXT', 'IMAGE', 'FILE', 'AUDIO']) &&
+             (!('attachmentName' in data) || (data.attachmentName is string && data.attachmentName.size() <= 160)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidHealthMetricsRecord(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.dateKey is string && data.dateKey.size() >= 1 && data.dateKey.size() <= 20 &&
+             data.heightCm is number && data.heightCm >= 0 && data.heightCm <= 300 &&
+             data.weightKg is number && data.weightKg >= 0 && data.weightKg <= 500 &&
+             data.bmiValue is number && data.bmiValue >= 0 && data.bmiValue <= 100 &&
+             data.bmiCategory is string && data.bmiCategory.size() <= 40 &&
+             data.waterIntakeMl is int && data.waterIntakeMl >= 0 && data.waterIntakeMl <= 20000 &&
+             data.waterGoalMl is int && data.waterGoalMl >= 500 && data.waterGoalMl <= 10000 &&
+             data.lifeConditionTitle is string && data.lifeConditionTitle.size() <= 120 &&
+             data.lifeConditionScore is int && data.lifeConditionScore >= 0 && data.lifeConditionScore <= 100 &&
+             data.lifeConditionSummary is string && data.lifeConditionSummary.size() <= 1500 &&
+             isBoundedStringList(data.lifeConditionTips, 8) &&
+             data.language in ['EN', 'BN'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidDoctorAppointment(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.doctorId is string && data.doctorId.size() >= 1 && data.doctorId.size() <= 64 &&
+             data.doctorName is string && data.doctorName.size() >= 1 && data.doctorName.size() <= 120 &&
+             data.specialty is string && data.specialty.size() >= 1 && data.specialty.size() <= 100 &&
+             data.hospital is string && data.hospital.size() >= 1 && data.hospital.size() <= 140 &&
+             data.appointmentDate is string && data.appointmentDate.size() >= 1 && data.appointmentDate.size() <= 30 &&
+             data.timeSlot is string && data.timeSlot.size() >= 1 && data.timeSlot.size() <= 30 &&
+             data.consultationMode in ['VIDEO', 'AUDIO', 'CHAT'] &&
+             data.feeBdt is int && data.feeBdt >= 100 && data.feeBdt <= 50000 &&
+             data.paymentMethod in ['BKASH', 'NAGAD', 'CARD'] &&
+             data.paymentStatus in ['PAID', 'REFUNDED'] &&
+             data.bookingStatus in ['CONFIRMED', 'COMPLETED', 'CANCELLED'] &&
+             data.bookingRef is string && data.bookingRef.size() >= 1 && data.bookingRef.size() <= 40 &&
+             data.reasonForVisit is string && data.reasonForVisit.size() <= 500 &&
+             data.attachedReportTitle is string && data.attachedReportTitle.size() <= 160 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // --- Collection Rules ---
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'age', 'language', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'age', 'location', 'emergencyNumber', 'language', 'healthConditions', 'dietaryPreference', 'createdAt', 'updatedAt']) &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'age', 'location', 'emergencyNumber', 'language', 'healthConditions', 'dietaryPreference', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // Medicine Reminders
+      match /reminders/{reminderId} {
+        allow get: if isOwner(userId) && isValidId(reminderId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(reminderId) &&
+                         incoming().keys().hasAll(['userId', 'medicineName', 'dosage', 'timeSlot', 'scheduledTime', 'mealTiming', 'durationDays', 'sourceType', 'active', 'todayStatus', 'lastActionDate', 'notes', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'medicineName', 'dosage', 'timeSlot', 'scheduledTime', 'mealTiming', 'durationDays', 'sourceType', 'active', 'todayStatus', 'lastActionDate', 'notes', 'ringtoneUri', 'ringtoneName', 'createdAt', 'updatedAt']) &&
+                         isValidMedicineReminder(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(reminderId) &&
+                         isValidMedicineReminder(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         (
+                           incoming().diff(existing()).affectedKeys().hasOnly(['active', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['todayStatus', 'lastActionDate', 'scheduledTime', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['todayStatus', 'lastActionDate', 'updatedAt']) ||
+                           incoming().diff(existing()).affectedKeys().hasOnly(['medicineName', 'dosage', 'timeSlot', 'scheduledTime', 'mealTiming', 'durationDays', 'notes', 'ringtoneUri', 'ringtoneName', 'active', 'updatedAt'])
+                         );
+
+        allow delete: if isOwner(userId) && isValidId(reminderId);
+      }
+
+      // Adherence Logs (Append-only)
+      match /adherence_logs/{logId} {
+        allow get: if isOwner(userId) && isValidId(logId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(logId) &&
+                         incoming().keys().hasAll(['userId', 'reminderId', 'medicineName', 'action', 'dateKey', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'reminderId', 'medicineName', 'action', 'dateKey', 'createdAt']) &&
+                         isValidAdherenceLog(incoming());
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(logId);
+      }
+
+      // Saved Doctor Briefs
+      match /doctor_briefs/{briefId} {
+        allow get: if isOwner(userId) && isValidId(briefId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(briefId) &&
+                         incoming().keys().hasAll(['userId', 'language', 'chiefSymptoms', 'severityAndContext', 'questionsForDoctor', 'redFlagWarning', 'urgentCareAdvised', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'language', 'chiefSymptoms', 'severityAndContext', 'questionsForDoctor', 'redFlagWarning', 'urgentCareAdvised', 'createdAt']) &&
+                         isValidDoctorBrief(incoming());
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(briefId);
+      }
+
+      // Saved Diet Plans
+      match /diet_plans/{planId} {
+        allow get: if isOwner(userId) && isValidId(planId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(planId) &&
+                         incoming().keys().hasAll(['userId', 'language', 'age', 'conditions', 'preference', 'breakfastTitle', 'breakfastPortion', 'breakfastRationale', 'lunchTitle', 'lunchPortion', 'lunchRationale', 'snackTitle', 'snackPortion', 'snackRationale', 'dinnerTitle', 'dinnerPortion', 'dinnerRationale', 'foodsToPrioritize', 'foodsToLimit', 'hydrationTip', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'language', 'age', 'conditions', 'preference', 'breakfastTitle', 'breakfastPortion', 'breakfastRationale', 'lunchTitle', 'lunchPortion', 'lunchRationale', 'snackTitle', 'snackPortion', 'snackRationale', 'dinnerTitle', 'dinnerPortion', 'dinnerRationale', 'foodsToPrioritize', 'foodsToLimit', 'hydrationTip', 'createdAt']) &&
+                         isValidDietPlan(incoming());
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(planId);
+      }
+
+      // Mental Wellness Mood Journal Entries
+      match /mood_entries/{entryId} {
+        allow get: if isOwner(userId) && isValidId(entryId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(entryId) &&
+                         incoming().keys().hasAll(['userId', 'language', 'selectedMood', 'journalText', 'detectedMoodTag', 'moodScore', 'aiReflection', 'microAction', 'supportNote', 'dateLabel', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'language', 'selectedMood', 'journalText', 'detectedMoodTag', 'moodScore', 'aiReflection', 'microAction', 'supportNote', 'dateLabel', 'createdAt']) &&
+                         isValidMoodEntry(incoming());
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(entryId);
+      }
+
+      // Serial Medical Reports Vault
+      match /medical_reports/{reportId} {
+        allow get: if isOwner(userId) && isValidId(reportId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(reportId) &&
+                         incoming().keys().hasAll(['userId', 'serialNumber', 'title', 'category', 'doctorOrLab', 'reportDate', 'summary', 'details', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'serialNumber', 'title', 'category', 'doctorOrLab', 'reportDate', 'summary', 'details', 'attachmentType', 'attachmentName', 'createdAt']) &&
+                         isValidMedicalReport(incoming());
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(reportId);
+      }
+
+      // Paid Online Doctor Appointments
+      match /doctor_appointments/{appointmentId} {
+        allow get: if isOwner(userId) && isValidId(appointmentId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(appointmentId) &&
+                         incoming().keys().hasAll(['userId', 'doctorId', 'doctorName', 'specialty', 'hospital', 'appointmentDate', 'timeSlot', 'consultationMode', 'feeBdt', 'paymentMethod', 'paymentStatus', 'bookingStatus', 'bookingRef', 'reasonForVisit', 'attachedReportTitle', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'doctorId', 'doctorName', 'specialty', 'hospital', 'appointmentDate', 'timeSlot', 'consultationMode', 'feeBdt', 'paymentMethod', 'paymentStatus', 'bookingStatus', 'bookingRef', 'reasonForVisit', 'attachedReportTitle', 'createdAt', 'updatedAt']) &&
+                         isValidDoctorAppointment(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(appointmentId) &&
+                         isValidDoctorAppointment(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['bookingStatus', 'paymentStatus', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(appointmentId);
+      }
+
+      // Daily BMI, Hydration & AI Life Condition Summary
+      match /health_metrics/{metricId} {
+        allow get: if isOwner(userId) && isValidId(metricId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(metricId) &&
+                         incoming().keys().hasAll(['userId', 'dateKey', 'heightCm', 'weightKg', 'bmiValue', 'bmiCategory', 'waterIntakeMl', 'waterGoalMl', 'lifeConditionTitle', 'lifeConditionScore', 'lifeConditionSummary', 'lifeConditionTips', 'language', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'dateKey', 'heightCm', 'weightKg', 'bmiValue', 'bmiCategory', 'waterIntakeMl', 'waterGoalMl', 'lifeConditionTitle', 'lifeConditionScore', 'lifeConditionSummary', 'lifeConditionTips', 'language', 'createdAt', 'updatedAt']) &&
+                         isValidHealthMetricsRecord(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(metricId) &&
+                         isValidHealthMetricsRecord(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['heightCm', 'weightKg', 'bmiValue', 'bmiCategory', 'waterIntakeMl', 'waterGoalMl', 'lifeConditionTitle', 'lifeConditionScore', 'lifeConditionSummary', 'lifeConditionTips', 'language', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(metricId);
+      }
+    }
+  }
+}
