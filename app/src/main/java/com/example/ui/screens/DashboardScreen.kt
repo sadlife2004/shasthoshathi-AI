@@ -18,8 +18,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,9 +33,11 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocationOn
@@ -78,6 +84,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.BuildConfig
+import com.example.data.firebase.applyCustomAppCheckDebugSecret
+import com.example.data.firebase.getCurrentAppCheckDebugSecret
 import com.example.data.model.HealthMetricsRecord
 import com.example.data.model.MedicineReminder
 import com.example.data.model.MoodEntry
@@ -950,6 +959,10 @@ private fun EditableProfileSheetContent(
             Text(strings.saveProfileBtn, style = MaterialTheme.typography.labelLarge)
         }
 
+        if (BuildConfig.DEBUG) {
+            AppCheckDebugTokenCard(language = language)
+        }
+
         if (showSampleButton) {
             OutlinedButton(
                 onClick = onLoadSampleData,
@@ -979,6 +992,131 @@ private fun EditableProfileSheetContent(
         }
 
         Spacer(Modifier.height(14.dp))
+    }
+}
+
+@Composable
+private fun AppCheckDebugTokenCard(language: AppLanguage) {
+    val context = LocalContext.current
+    val isBn = language == AppLanguage.BN
+    var debugToken by remember { mutableStateOf(getCurrentAppCheckDebugSecret(context)) }
+    var customInput by remember { mutableStateOf("") }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("appcheck_debug_token_card"),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
+        border = BorderStroke(1.dp, TealDeep.copy(alpha = 0.25f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = TealDeep,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = if (isBn) "Firebase App Check ডিবাগ টোকেন" else "Firebase App Check Debug Token",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = TealDeep
+                )
+            }
+            Text(
+                text = if (isBn) {
+                    "নিচের টোকেনটি কপি করে Firebase Console → Project (gen-lang-client-0229047245) → App Check → Apps → com.aistudio.shasthosathi.kxmzqr → Manage debug tokens → Add debug token-এ পেস্ট করুন।"
+                } else {
+                    "Copy this token and paste it into Firebase Console → Project (gen-lang-client-0229047245) → App Check → Apps → com.aistudio.shasthosathi.kxmzqr → Manage debug tokens → Add debug token."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Text(
+                    text = debugToken.ifBlank { "Unavailable" },
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                        .testTag("appcheck_debug_token_value")
+                )
+            }
+            Button(
+                onClick = {
+                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                    cm?.setPrimaryClip(ClipData.newPlainText("Firebase App Check Debug Token", debugToken))
+                    Toast.makeText(
+                        context,
+                        if (isBn) "ডিবাগ টোকেন কপি হয়েছে!" else "Debug token copied!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testTag("copy_appcheck_debug_token_button"),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = TealDeep)
+            ) {
+                Icon(Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (isBn) "ডিবাগ টোকেন কপি করুন" else "Copy Debug Token")
+            }
+
+            OutlinedTextField(
+                value = customInput,
+                onValueChange = { customInput = it },
+                label = {
+                    Text(
+                        if (isBn) "অথবা Firebase Console থেকে টোকেন পেস্ট করুন"
+                        else "Or paste token from Firebase Console"
+                    )
+                },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
+            OutlinedButton(
+                onClick = {
+                    if (applyCustomAppCheckDebugSecret(context, customInput)) {
+                        debugToken = getCurrentAppCheckDebugSecret(context)
+                        customInput = ""
+                        Toast.makeText(
+                            context,
+                            if (isBn) "নতুন ডিবাগ টোকেন চালু হয়েছে!" else "Debug token saved & activated!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        Toast.makeText(
+                            context,
+                            if (isBn) "সঠিক UUID টোকেন দিন।" else "Please paste a valid UUID token.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                },
+                enabled = customInput.trim().length >= 8,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testTag("apply_custom_appcheck_token_button"),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(if (isBn) "টোকেন সেভ ও চালু করুন" else "Save & Activate Token")
+            }
+        }
     }
 }
 

@@ -8,9 +8,11 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.appcheck.recaptcha.RecaptchaAppCheckProviderFactory
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
 private const val TAG = "AppCheckInit"
+private const val DEBUG_PROVIDER_LOG_TAG = "DebugAppCheckProvider"
 
 private const val DEBUG_TOKEN_EXTRA = "FIREBASE_APPCHECK_DEBUG_TOKEN"
 private const val DEBUG_STORE_PREFIX = "com.google.firebase.appcheck.debug.store."
@@ -18,16 +20,12 @@ private const val TOKEN_STORE_PREFIX = "com.google.firebase.appcheck.store."
 private const val DEBUG_SECRET_KEY = "com.google.firebase.appcheck.debug.DEBUG_SECRET"
 private const val RECAPTCHA_SITE_KEY_RES = "recaptcha_site_key"
 
-// Dedicated metadata store to distinguish a harness-injected registered debug token
-// (e.g., AI Studio emulator / CI) from an unregistered random UUID on a real phone,
-// and to run stale-token cleanup strictly once across app upgrades.
-private const val META_PREFS = "shasthosathi_appcheck_meta"
-private const val KEY_HARNESS_TOKEN = "harness_debug_token"
-private const val KEY_MIGRATED_V12 = "migrated_clean_recaptcha_v12"
-
 object AppCheckDiagnostics {
     @Volatile
     var activeProvider: String = "Uninitialized"
+
+    @Volatile
+    var currentDebugSecret: String? = null
 }
 
 private val isAppCheckInstalled = AtomicBoolean(false)
@@ -40,8 +38,7 @@ fun configureAppCheck(context: Context, intent: Intent?) {
 
         val intentDebugToken = intent?.getStringExtra(DEBUG_TOKEN_EXTRA)?.trim()
 
-        // Avoid re-installing App Check provider on Activity recreations (e.g. rotation, sign-in return, camera),
-        // unless a fresh harness debug token arrived via launch Intent.
+        // Avoid re-installing App Check provider on Activity recreations unless a fresh harness token arrived.
         if (isAppCheckInstalled.get() && intentDebugToken.isNullOrEmpty()) {
             return
         }
@@ -52,98 +49,142 @@ fun configureAppCheck(context: Context, intent: Intent?) {
             "$DEBUG_STORE_PREFIX$persistenceKey",
             Context.MODE_PRIVATE
         )
-        val tokenStorePrefs = context.getSharedPreferences(
-            "$TOKEN_STORE_PREFIX$persistenceKey",
-            Context.MODE_PRIVATE
-        )
-        val metaPrefs = context.getSharedPreferences(META_PREFS, Context.MODE_PRIVATE)
         val appCheck = FirebaseAppCheck.getInstance()
 
         if (BuildConfig.DEBUG) {
-            val savedHarnessToken = metaPrefs.getString(KEY_HARNESS_TOKEN, null)?.trim()
-
-            when {
-                // Case 1: AI Studio emulator / test harness explicitly supplied a registered debug token
+            val activeSecret = when {
                 !intentDebugToken.isNullOrEmpty() -> {
                     // Synchronous commit() ensures the secret is written before DebugAppCheckProviderFactory reads it.
                     debugStorePrefs.edit()
                         .putString(DEBUG_SECRET_KEY, intentDebugToken)
                         .commit()
-                    metaPrefs.edit()
-                        .putString(KEY_HARNESS_TOKEN, intentDebugToken)
-                        .commit()
-                    appCheck.installAppCheckProviderFactory(
-                        DebugAppCheckProviderFactory.getInstance()
-                    )
-                    appCheck.setTokenAutoRefreshEnabled(true)
-                    AppCheckDiagnostics.activeProvider = "Debug (Emulator)"
-                    isAppCheckInstalled.set(true)
-                    Log.d(TAG, "App Check debug secret configured from launch Intent; DebugAppCheckProviderFactory installed.")
+                    Log.d(TAG, "App Check debug secret configured from launch Intent.")
+                    intentDebugToken
                 }
-
-                // Case 2: Re-opened inside AI Studio emulator where a registered harness token was previously injected
-                !savedHarnessToken.isNullOrEmpty() -> {
-                    debugStorePrefs.edit()
-                        .putString(DEBUG_SECRET_KEY, savedHarnessToken)
-                        .commit()
-                    appCheck.installAppCheckProviderFactory(
-                        DebugAppCheckProviderFactory.getInstance()
-                    )
-                    appCheck.setTokenAutoRefreshEnabled(true)
-                    AppCheckDiagnostics.activeProvider = "Debug (Emulator Cached)"
-                    isAppCheckInstalled.set(true)
-                    Log.d(TAG, "App Check debug secret restored from harness cache; DebugAppCheckProviderFactory installed.")
-                }
-
-                // Case 3: Installed directly on a real Android phone via APK (no harness debug token provided).
-                // Clear stale unregistered debug tokens ONCE, then install reCAPTCHA Enterprise and let
-                // Firebase SDK fetch & cache tokens naturally on demand (never call forceRefresh in onCreate).
                 else -> {
-                    if (!metaPrefs.getBoolean(KEY_MIGRATED_V12, false)) {
-                        debugStorePrefs.edit().clear().commit()
-                        tokenStorePrefs.edit().clear().commit()
-                        metaPrefs.edit().putBoolean(KEY_MIGRATED_V12, true).commit()
+                    val existing = debugStorePrefs.getString(DEBUG_SECRET_KEY, null)?.trim()
+                    if (!existing.isNullOrEmpty()) {
+                        existing
+                    } else {
+                        val generated = UUID.randomUUID().toString()
+                        debugStorePrefs.edit()
+                            .putString(DEBUG_SECRET_KEY, generated)
+                            .commit()
+                        generated
                     }
-                    if (!installRecaptchaProvider(context, appCheck)) {
-                        Log.w(TAG, "No recaptcha_site_key available; falling back to DebugAppCheckProviderFactory.")
-                        appCheck.installAppCheckProviderFactory(
-                            DebugAppCheckProviderFactory.getInstance()
-                        )
-                        appCheck.setTokenAutoRefreshEnabled(true)
-                        AppCheckDiagnostics.activeProvider = "Debug (Fallback)"
-                    }
-                    isAppCheckInstalled.set(true)
                 }
             }
-        } else {
-            installRecaptchaProvider(context, appCheck)
+
+            AppCheckDiagnostics.currentDebugSecret = activeSecret
+            Log.d(
+                DEBUG_PROVIDER_LOG_TAG,
+                "Enter this debug secret into the allow list in the Firebase Console for your project: $activeSecret"
+            )
+
+            appCheck.installAppCheckProviderFactory(
+                DebugAppCheckProviderFactory.getInstance()
+            )
+            appCheck.setTokenAutoRefreshEnabled(true)
+            AppCheckDiagnostics.activeProvider = "DebugAppCheckProvider"
             isAppCheckInstalled.set(true)
+            Log.d(TAG, "DebugAppCheckProviderFactory installed.")
+        } else {
+            val resId = context.resources.getIdentifier(
+                RECAPTCHA_SITE_KEY_RES,
+                "string",
+                context.packageName
+            )
+            if (resId != 0) {
+                val siteKey = context.getString(resId).trim()
+                if (siteKey.isNotBlank()) {
+                    appCheck.installAppCheckProviderFactory(
+                        RecaptchaAppCheckProviderFactory.getInstance(siteKey)
+                    )
+                    appCheck.setTokenAutoRefreshEnabled(true)
+                    AppCheckDiagnostics.activeProvider = "reCAPTCHA Enterprise"
+                    isAppCheckInstalled.set(true)
+                    Log.d(TAG, "RecaptchaAppCheckProviderFactory installed.")
+                } else {
+                    Log.e(TAG, "recaptcha_site_key resource string is blank.")
+                }
+            } else {
+                Log.e(TAG, "recaptcha_site_key string resource not found in package.")
+            }
         }
     } catch (e: Exception) {
         Log.e(TAG, "Failed to initialize Firebase App Check", e)
     }
 }
 
-private fun installRecaptchaProvider(context: Context, appCheck: FirebaseAppCheck): Boolean {
-    val resId = context.resources.getIdentifier(
-        RECAPTCHA_SITE_KEY_RES,
-        "string",
-        context.packageName
-    )
-    if (resId == 0) {
-        Log.e(TAG, "recaptcha_site_key string resource not found in package.")
-        return false
+/**
+ * Returns the active Firebase App Check debug secret UUID stored on this device (Debug builds only).
+ */
+fun getCurrentAppCheckDebugSecret(context: Context): String {
+    val cached = AppCheckDiagnostics.currentDebugSecret
+    if (!cached.isNullOrBlank()) return cached
+    return try {
+        if (FirebaseApp.getApps(context).isEmpty()) {
+            FirebaseApp.initializeApp(context)
+        }
+        val persistenceKey = FirebaseApp.getInstance().persistenceKey
+        val prefs = context.getSharedPreferences(
+            "$DEBUG_STORE_PREFIX$persistenceKey",
+            Context.MODE_PRIVATE
+        )
+        val existing = prefs.getString(DEBUG_SECRET_KEY, null)?.trim()
+        if (!existing.isNullOrBlank()) {
+            AppCheckDiagnostics.currentDebugSecret = existing
+            existing
+        } else {
+            val generated = UUID.randomUUID().toString()
+            prefs.edit().putString(DEBUG_SECRET_KEY, generated).commit()
+            AppCheckDiagnostics.currentDebugSecret = generated
+            generated
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Could not read debug secret", e)
+        ""
     }
-    val siteKey = context.getString(resId).trim()
-    if (siteKey.isBlank()) {
-        Log.e(TAG, "recaptcha_site_key resource string is blank.")
-        return false
+}
+
+/**
+ * Saves a user-provided Firebase Console App Check Debug Token synchronously,
+ * clears any stale cached App Check token, and reinstalls DebugAppCheckProviderFactory.
+ */
+fun applyCustomAppCheckDebugSecret(context: Context, customToken: String): Boolean {
+    val cleaned = customToken.trim()
+    if (cleaned.length < 8) return false
+    return try {
+        if (FirebaseApp.getApps(context).isEmpty()) {
+            FirebaseApp.initializeApp(context)
+        }
+        val persistenceKey = FirebaseApp.getInstance().persistenceKey
+        val debugStorePrefs = context.getSharedPreferences(
+            "$DEBUG_STORE_PREFIX$persistenceKey",
+            Context.MODE_PRIVATE
+        )
+        val tokenStorePrefs = context.getSharedPreferences(
+            "$TOKEN_STORE_PREFIX$persistenceKey",
+            Context.MODE_PRIVATE
+        )
+        debugStorePrefs.edit().putString(DEBUG_SECRET_KEY, cleaned).commit()
+        tokenStorePrefs.edit().clear().commit()
+        AppCheckDiagnostics.currentDebugSecret = cleaned
+
+        val appCheck = FirebaseAppCheck.getInstance()
+        appCheck.installAppCheckProviderFactory(
+            DebugAppCheckProviderFactory.getInstance()
+        )
+        appCheck.setTokenAutoRefreshEnabled(true)
+        AppCheckDiagnostics.activeProvider = "DebugAppCheckProvider"
+        isAppCheckInstalled.set(true)
+        Log.d(
+            DEBUG_PROVIDER_LOG_TAG,
+            "Custom App Check debug secret applied and activated: $cleaned"
+        )
+        true
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to apply custom debug secret", e)
+        false
     }
-    appCheck.installAppCheckProviderFactory(
-        RecaptchaAppCheckProviderFactory.getInstance(siteKey)
-    )
-    appCheck.setTokenAutoRefreshEnabled(true)
-    AppCheckDiagnostics.activeProvider = "reCAPTCHA Enterprise"
-    Log.d(TAG, "RecaptchaAppCheckProviderFactory installed once (key=${siteKey.take(8)}...).")
-    return true
 }
