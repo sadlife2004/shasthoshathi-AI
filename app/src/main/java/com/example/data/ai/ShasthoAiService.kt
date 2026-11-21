@@ -19,7 +19,6 @@ import com.example.data.model.SymptomAttachmentAnalysis
 import com.example.data.model.SymptomChatMessage
 import com.example.data.model.UserProfile
 import com.example.data.firebase.AppCheckDiagnostics
-import com.example.data.firebase.forceRefreshAppCheckToken
 import com.example.i18n.AppLanguage
 import com.google.firebase.Firebase
 import com.google.firebase.ai.GenerativeModel
@@ -506,27 +505,13 @@ class ShasthoAiService {
             throw e
         } catch (e: Exception) {
             if (isAppCheckError(e)) {
-                Log.w(AI_TAG, "$label hit App Check error on $PRIMARY_MODEL; forcing App Check token refresh...", e)
-                val refreshErr = forceRefreshAppCheckToken()
-                if (refreshErr != null) {
-                    Log.e(AI_TAG, "App Check refresh failed (${AppCheckDiagnostics.activeProvider}): $refreshErr")
-                }
-                return try {
-                    withTimeout(primaryTimeoutMs) {
-                        primaryModel.generateContent(requestContent)
-                    }
-                } catch (retryErr: CancellationException) {
-                    throw retryErr
-                } catch (retryErr: Exception) {
-                    val detail = AppCheckDiagnostics.lastTokenError
-                    if (isAppCheckError(retryErr) && !detail.isNullOrBlank()) {
-                        throw IllegalStateException(
-                            "Firebase App Check (${AppCheckDiagnostics.activeProvider}) failed: $detail",
-                            retryErr
-                        )
-                    }
-                    throw retryErr
-                }
+                // Do NOT force-refresh or retry immediately — hammering getAppCheckToken(true)
+                // triggers Firebase App Check RetryManager's "Too many attempts." cooldown.
+                Log.e(AI_TAG, "$label App Check error (${AppCheckDiagnostics.activeProvider}): ${e.localizedMessage}", e)
+                throw IllegalStateException(
+                    "App Check (${AppCheckDiagnostics.activeProvider}): ${e.localizedMessage ?: "Verification failed. Please wait 1 minute and try again."}",
+                    e
+                )
             }
             Log.w(AI_TAG, "$label failed on $PRIMARY_MODEL (${e.localizedMessage}); retrying with $FALLBACK_MODEL", e)
             withTimeout(fallbackTimeoutMs) {
