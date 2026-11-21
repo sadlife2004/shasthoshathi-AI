@@ -584,7 +584,7 @@
               <h1 data-i18n="heroTitle">ShasthoSathi AI</h1>
               <div class="badge-row">
                 <span class="badge">Android APK</span>
-                <span class="badge">v1.3</span>
+                <span class="badge">v1.4</span>
                 <span class="badge">Android 7.0+</span>
                 <span class="badge" data-i18n="bilingualBadge">English &amp; বাংলা</span>
               </div>
@@ -943,10 +943,10 @@
         }
 
         const directCandidates = [
-          "./ShasthoSathi-AI.apk?v=1.3",
-          "/ShasthoSathi-AI.apk?v=1.3",
-          "./public/ShasthoSathi-AI.apk?v=1.3",
-          "/public/ShasthoSathi-AI.apk?v=1.3"
+          "./ShasthoSathi-AI.apk?v=1.4",
+          "/ShasthoSathi-AI.apk?v=1.4",
+          "./public/ShasthoSathi-AI.apk?v=1.4",
+          "/public/ShasthoSathi-AI.apk?v=1.4"
         ];
         for (let i = 0; i < directCandidates.length; i++) {
           if (await probeDirectUrl(directCandidates[i])) {
@@ -957,10 +957,10 @@
         }
 
         const manifestCandidates = [
-          "./apk-parts/manifest.json?v=1.3",
-          "/apk-parts/manifest.json?v=1.3",
-          "./public/apk-parts/manifest.json?v=1.3",
-          "/public/apk-parts/manifest.json?v=1.3"
+          "./apk-parts/manifest.json?v=1.4",
+          "/apk-parts/manifest.json?v=1.4",
+          "./public/apk-parts/manifest.json?v=1.4",
+          "/public/apk-parts/manifest.json?v=1.4"
         ];
         for (let i = 0; i < manifestCandidates.length; i++) {
           const found = await probePartsManifest(manifestCandidates[i]);

@@ -18,13 +18,12 @@ import com.example.data.model.PrescriptionAnalysisResult
 import com.example.data.model.SymptomAttachmentAnalysis
 import com.example.data.model.SymptomChatMessage
 import com.example.data.model.UserProfile
+import com.example.BuildConfig
 import com.example.data.firebase.AppCheckDiagnostics
 import com.example.i18n.AppLanguage
 import com.google.firebase.Firebase
 import com.google.firebase.ai.GenerativeModel
 import com.google.firebase.ai.ai
-import com.google.firebase.ai.type.Content
-import com.google.firebase.ai.type.GenerateContentResponse
 import com.google.firebase.ai.type.Schema
 import com.google.firebase.ai.type.content
 import com.google.firebase.ai.type.generationConfig
@@ -39,6 +38,9 @@ import java.util.UUID
 private const val AI_TAG = "ShasthoAiService"
 private const val PRIMARY_MODEL = "gemini-3.8-flash"
 private const val FALLBACK_MODEL = "gemini-3.5-flash-lite"
+private const val REST_PRIMARY_MODEL = "gemini-flash-latest"
+private const val REST_FALLBACK_MODEL = "gemini-3.8-flash"
+private const val API_KEY_PLACEHOLDER = "YOUR_GEMINI_API_KEY_HERE"
 private const val TEXT_PRIMARY_TIMEOUT_MS = 45_000L
 private const val TEXT_FALLBACK_TIMEOUT_MS = 35_000L
 private const val VISION_PRIMARY_TIMEOUT_MS = 50_000L
@@ -47,19 +49,19 @@ private const val VISION_FALLBACK_TIMEOUT_MS = 40_000L
 class ShasthoAiService {
 
     // 1. Symptom Organizer Conversational Model (non-diagnostic, empathetic, 3-4 concise follow-ups)
+    private val symptomSystemInstructionText = """
+        You are ShasthoSathi AI, an empathetic, safety-hardened pre-consultation health companion for users in Bangladesh and globally.
+        STRICT RULES:
+        1. NEVER diagnose any disease or prescribe any medication. Always frame guidance as preparation for a licensed doctor.
+        2. Ask ONLY ONE short, targeted, warm follow-up question per turn (max 2-3 short sentences total).
+        3. Over 3-4 turns, gently gather: (a) duration of symptoms, (b) severity 1-10, (c) existing conditions or allergies, (d) medicines already taken.
+        4. After 3-4 user turns, briefly let the user know they can tap 'Generate Doctor Brief' to get their structured summary.
+        5. If severe red-flag symptoms appear (chest pain, difficulty breathing, severe bleeding, fainting, high persistent fever >103F), immediately advise urgent medical care.
+        6. Match the requested language strictly (natural English or natural Bengali/বাংলা).
+    """.trimIndent()
+
     private val symptomSystemInstruction = content {
-        text(
-            """
-            You are ShasthoSathi AI, an empathetic, safety-hardened pre-consultation health companion for users in Bangladesh and globally.
-            STRICT RULES:
-            1. NEVER diagnose any disease or prescribe any medication. Always frame guidance as preparation for a licensed doctor.
-            2. Ask ONLY ONE short, targeted, warm follow-up question per turn (max 2-3 short sentences total).
-            3. Over 3-4 turns, gently gather: (a) duration of symptoms, (b) severity 1-10, (c) existing conditions or allergies, (d) medicines already taken.
-            4. After 3-4 user turns, briefly let the user know they can tap 'Generate Doctor Brief' to get their structured summary.
-            5. If severe red-flag symptoms appear (chest pain, difficulty breathing, severe bleeding, fainting, high persistent fever >103F), immediately advise urgent medical care.
-            6. Match the requested language strictly (natural English or natural Bengali/বাংলা).
-            """.trimIndent()
-        )
+        text(symptomSystemInstructionText)
     }
 
     private val symptomChatModel by lazy {
@@ -95,10 +97,11 @@ class ShasthoAiService {
         responseSchema = doctorBriefSchema
     }
 
+    private val doctorBriefSystemInstructionText =
+        "You organize patient-reported symptoms into a clear, non-diagnostic pre-consultation brief for a licensed physician. Never diagnose diseases."
+
     private val doctorBriefSystemInstruction = content {
-        text(
-            "You organize patient-reported symptoms into a clear, non-diagnostic pre-consultation brief for a licensed physician. Never diagnose diseases."
-        )
+        text(doctorBriefSystemInstructionText)
     }
 
     private val doctorBriefModel by lazy {
@@ -157,13 +160,13 @@ class ShasthoAiService {
         responseSchema = prescriptionSchema
     }
 
+    private val prescriptionSystemInstructionText = """
+        You are a safety-first medical prescription OCR assistant familiar with Bangladeshi and international prescriptions (including 1+0+1 / 1+1+1 notation, Napa, Seclo, Fexo, etc.).
+        ANTI-HALLUCINATION RULE: Never guess unreadable handwriting. If a medicine name or dose is blurry or uncertain, set confidence to "Low", set overallClarity to "Low" or "Medium", and explain clearly in warningMessage.
+    """.trimIndent()
+
     private val prescriptionSystemInstruction = content {
-        text(
-            """
-            You are a safety-first medical prescription OCR assistant familiar with Bangladeshi and international prescriptions (including 1+0+1 / 1+1+1 notation, Napa, Seclo, Fexo, etc.).
-            ANTI-HALLUCINATION RULE: Never guess unreadable handwriting. If a medicine name or dose is blurry or uncertain, set confidence to "Low", set overallClarity to "Low" or "Medium", and explain clearly in warningMessage.
-            """.trimIndent()
-        )
+        text(prescriptionSystemInstructionText)
     }
 
     private val prescriptionModel by lazy {
@@ -214,10 +217,11 @@ class ShasthoAiService {
         responseSchema = dietPlanSchema
     }
 
+    private val dietPlanSystemInstructionText =
+        "You are a culturally grounded nutrition guide creating everyday Bangladeshi home-cooked meal plans (e.g., লাল আটার রুটি, ডাল, শাকসবজি, মাছের ঝোল, পরিমিত ভাত, সিদ্ধ ডিম, পেয়ারা, ছোলা). Provide general wellness guidance only, not medical prescriptions."
+
     private val dietPlanSystemInstruction = content {
-        text(
-            "You are a culturally grounded nutrition guide creating everyday Bangladeshi home-cooked meal plans (e.g., লাল আটার রুটি, ডাল, শাকসবজি, মাছের ঝোল, পরিমিত ভাত, সিদ্ধ ডিম, পেয়ারা, ছোলা). Provide general wellness guidance only, not medical prescriptions."
-        )
+        text(dietPlanSystemInstructionText)
     }
 
     private val dietPlanModel by lazy {
@@ -252,10 +256,11 @@ class ShasthoAiService {
         responseSchema = moodSchema
     }
 
+    private val moodSystemInstructionText =
+        "You are a compassionate mental wellness journal companion. Validate feelings warmly, offer one small practical micro-action, never diagnose mental health disorders, and gently encourage professional support if distress is significant."
+
     private val moodSystemInstruction = content {
-        text(
-            "You are a compassionate mental wellness journal companion. Validate feelings warmly, offer one small practical micro-action, never diagnose mental health disorders, and gently encourage professional support if distress is significant."
-        )
+        text(moodSystemInstructionText)
     }
 
     private val moodModel by lazy {
@@ -321,22 +326,22 @@ class ShasthoAiService {
         responseSchema = assistantCommandSchema
     }
 
+    private val assistantCommandInstructionText = """
+        You are ShasthoSathi AI Command Bot — a bilingual (English & Bangla) personal health assistant that can BOTH:
+        1. Answer detailed questions about the user's saved Serial Medical Reports (#1, #2, #3...), Doctor Briefs, active medicines, and profile. Always reference the exact serial number (#1, #2...) and dates when discussing reports.
+        2. Control ALL features of the ShasthoSathi app via structured JSON commands:
+           - NAVIGATE: open SYMPTOMS, SCAN_RX, REMINDERS, DIET, MOOD, BMI (BMI & Hydration / Life Condition Summary), DATA_DASHBOARD (Health Analytics & PDF Export), REPORTS (My Reports Vault), or DOCTORS (Paid Professional Doctor Appointments).
+           - ADD_REMINDER: create a medicine reminder with exact 12-hour clock format "hh:mm AM/PM" (e.g. "09:00 PM", "07:30 AM").
+           - MARK_REMINDER_TAKEN / SNOOZE_REMINDER: mark or snooze a medicine by name.
+           - ADD_REPORT: save a new medical report entry into the user's serial reports vault.
+           - UPDATE_PROFILE: update user's age, location, or emergency contact number.
+           - TOGGLE_LANGUAGE: switch between English and Bangla.
+           - TEST_ALARM: trigger a test medicine alarm right now.
+        SAFETY RULE: Never diagnose diseases or prescribe new medications. Always remind the user to consult a licensed physician for clinical decisions.
+    """.trimIndent()
+
     private val assistantCommandInstruction = content {
-        text(
-            """
-            You are ShasthoSathi AI Command Bot — a bilingual (English & Bangla) personal health assistant that can BOTH:
-            1. Answer detailed questions about the user's saved Serial Medical Reports (#1, #2, #3...), Doctor Briefs, active medicines, and profile. Always reference the exact serial number (#1, #2...) and dates when discussing reports.
-            2. Control ALL features of the ShasthoSathi app via structured JSON commands:
-               - NAVIGATE: open SYMPTOMS, SCAN_RX, REMINDERS, DIET, MOOD, BMI (BMI & Hydration / Life Condition Summary), DATA_DASHBOARD (Health Analytics & PDF Export), REPORTS (My Reports Vault), or DOCTORS (Paid Professional Doctor Appointments).
-               - ADD_REMINDER: create a medicine reminder with exact 12-hour clock format "hh:mm AM/PM" (e.g. "09:00 PM", "07:30 AM").
-               - MARK_REMINDER_TAKEN / SNOOZE_REMINDER: mark or snooze a medicine by name.
-               - ADD_REPORT: save a new medical report entry into the user's serial reports vault.
-               - UPDATE_PROFILE: update user's age, location, or emergency contact number.
-               - TOGGLE_LANGUAGE: switch between English and Bangla.
-               - TEST_ALARM: trigger a test medicine alarm right now.
-            SAFETY RULE: Never diagnose diseases or prescribe new medications. Always remind the user to consult a licensed physician for clinical decisions.
-            """.trimIndent()
-        )
+        text(assistantCommandInstructionText)
     }
 
     private val assistantCommandModel by lazy {
@@ -374,10 +379,11 @@ class ShasthoAiService {
         responseSchema = reportExtractSchema
     }
 
+    private val reportExtractInstructionText =
+        "You extract structured key findings from medical lab reports, prescriptions, or imaging summaries for the patient's personal health archive. Never fabricate unreadable numbers; mark unclear items for doctor verification."
+
     private val reportExtractInstruction = content {
-        text(
-            "You extract structured key findings from medical lab reports, prescriptions, or imaging summaries for the patient's personal health archive. Never fabricate unreadable numbers; mark unclear items for doctor verification."
-        )
+        text(reportExtractInstructionText)
     }
 
     private val reportExtractModel by lazy {
@@ -414,10 +420,11 @@ class ShasthoAiService {
         responseSchema = lifeConditionSchema
     }
 
+    private val lifeConditionInstructionText =
+        "You are ShasthoSathi AI, a compassionate preventive wellness coach. Synthesize the user's BMI, daily water intake, medication adherence, and mood trend into a clear, encouraging 'Life Condition Summary'. Never diagnose diseases; give practical everyday hydration, movement, nutrition, and rest guidance."
+
     private val lifeConditionInstruction = content {
-        text(
-            "You are ShasthoSathi AI, a compassionate preventive wellness coach. Synthesize the user's BMI, daily water intake, medication adherence, and mood trend into a clear, encouraging 'Life Condition Summary'. Never diagnose diseases; give practical everyday hydration, movement, nutrition, and rest guidance."
-        )
+        text(lifeConditionInstructionText)
     }
 
     private val lifeConditionModel by lazy {
@@ -455,10 +462,11 @@ class ShasthoAiService {
         responseSchema = symptomAttachmentSchema
     }
 
+    private val symptomAttachmentInstructionText =
+        "You analyze patient-uploaded symptom photos, PDF/text medical documents, and voice/audio recordings to help organize information for a licensed doctor and archive it in the patient's personal Medical Reports Vault. NEVER diagnose diseases or prescribe treatments. If urgent red-flag symptoms appear, advise immediate medical care."
+
     private val symptomAttachmentInstruction = content {
-        text(
-            "You analyze patient-uploaded symptom photos, PDF/text medical documents, and voice/audio recordings to help organize information for a licensed doctor and archive it in the patient's personal Medical Reports Vault. NEVER diagnose diseases or prescribe treatments. If urgent red-flag symptoms appear, advise immediate medical care."
-        )
+        text(symptomAttachmentInstructionText)
     }
 
     private val symptomAttachmentModel by lazy {
@@ -479,6 +487,11 @@ class ShasthoAiService {
 
     // --- Resilient Model Execution Helper ---
 
+    private fun resolvedDirectApiKey(): String? {
+        val raw = BuildConfig.GEMINI_API_KEY.trim()
+        return raw.takeIf { it.isNotBlank() && !it.equals(API_KEY_PLACEHOLDER, ignoreCase = true) }
+    }
+
     private fun isAppCheckError(t: Throwable): Boolean {
         val msg = (t.message ?: t.localizedMessage ?: "").lowercase()
         return msg.contains("app check") || msg.contains("appcheck") || msg.contains("token is invalid") || msg.contains("403")
@@ -488,11 +501,44 @@ class ShasthoAiService {
         label: String,
         primaryModel: GenerativeModel,
         fallbackModel: GenerativeModel,
+        systemInstructionText: String,
+        expectJson: Boolean,
+        jsonSchemaHint: String? = null,
         primaryTimeoutMs: Long,
         fallbackTimeoutMs: Long,
-        requestContent: Content
-    ): GenerateContentResponse {
-        return try {
+        promptText: String,
+        imageBitmap: Bitmap? = null,
+        inlineBytes: ByteArray? = null,
+        inlineMimeType: String? = null
+    ): String {
+        val directApiKey = resolvedDirectApiKey()
+        if (directApiKey != null) {
+            return generateViaDirectRest(
+                label = label,
+                apiKey = directApiKey,
+                systemInstructionText = systemInstructionText,
+                expectJson = expectJson,
+                jsonSchemaHint = jsonSchemaHint,
+                primaryTimeoutMs = primaryTimeoutMs,
+                fallbackTimeoutMs = fallbackTimeoutMs,
+                promptText = promptText,
+                imageBitmap = imageBitmap,
+                inlineBytes = inlineBytes,
+                inlineMimeType = inlineMimeType
+            )
+        }
+
+        val requestContent = content {
+            if (imageBitmap != null) {
+                image(imageBitmap)
+            }
+            if (inlineBytes != null && !inlineMimeType.isNullOrBlank()) {
+                inlineData(inlineBytes, inlineMimeType)
+            }
+            text(promptText)
+        }
+
+        val response = try {
             withTimeout(primaryTimeoutMs) {
                 primaryModel.generateContent(requestContent)
             }
@@ -517,6 +563,91 @@ class ShasthoAiService {
             Log.w(AI_TAG, "$label failed on $PRIMARY_MODEL (${e.localizedMessage}); retrying with $FALLBACK_MODEL", e)
             withTimeout(fallbackTimeoutMs) {
                 fallbackModel.generateContent(requestContent)
+            }
+        }
+        return response.text?.trim().orEmpty()
+    }
+
+    private suspend fun generateViaDirectRest(
+        label: String,
+        apiKey: String,
+        systemInstructionText: String,
+        expectJson: Boolean,
+        jsonSchemaHint: String?,
+        primaryTimeoutMs: Long,
+        fallbackTimeoutMs: Long,
+        promptText: String,
+        imageBitmap: Bitmap?,
+        inlineBytes: ByteArray?,
+        inlineMimeType: String?
+    ): String {
+        return try {
+            withTimeout(primaryTimeoutMs) {
+                GeminiRestClient.generateContentText(
+                    apiKey = apiKey,
+                    modelName = REST_PRIMARY_MODEL,
+                    systemInstruction = systemInstructionText,
+                    promptText = promptText,
+                    imageBitmap = imageBitmap,
+                    inlineBytes = inlineBytes,
+                    inlineMimeType = inlineMimeType,
+                    expectJson = expectJson,
+                    jsonSchemaHint = jsonSchemaHint,
+                    timeoutMs = primaryTimeoutMs
+                )
+            }
+        } catch (e: TimeoutCancellationException) {
+            Log.w(AI_TAG, "$label REST timed out on $REST_PRIMARY_MODEL; retrying $REST_FALLBACK_MODEL", e)
+            withTimeout(fallbackTimeoutMs) {
+                GeminiRestClient.generateContentText(
+                    apiKey = apiKey,
+                    modelName = REST_FALLBACK_MODEL,
+                    systemInstruction = systemInstructionText,
+                    promptText = promptText,
+                    imageBitmap = imageBitmap,
+                    inlineBytes = inlineBytes,
+                    inlineMimeType = inlineMimeType,
+                    expectJson = expectJson,
+                    jsonSchemaHint = jsonSchemaHint,
+                    timeoutMs = fallbackTimeoutMs
+                )
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: GeminiRestHttpException) {
+            if (e.statusCode == 401 || e.statusCode == 403) {
+                throw e
+            }
+            Log.w(AI_TAG, "$label REST failed on $REST_PRIMARY_MODEL (HTTP ${e.statusCode}); retrying $REST_FALLBACK_MODEL", e)
+            withTimeout(fallbackTimeoutMs) {
+                GeminiRestClient.generateContentText(
+                    apiKey = apiKey,
+                    modelName = REST_FALLBACK_MODEL,
+                    systemInstruction = systemInstructionText,
+                    promptText = promptText,
+                    imageBitmap = imageBitmap,
+                    inlineBytes = inlineBytes,
+                    inlineMimeType = inlineMimeType,
+                    expectJson = expectJson,
+                    jsonSchemaHint = jsonSchemaHint,
+                    timeoutMs = fallbackTimeoutMs
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(AI_TAG, "$label REST failed on $REST_PRIMARY_MODEL (${e.localizedMessage}); retrying $REST_FALLBACK_MODEL", e)
+            withTimeout(fallbackTimeoutMs) {
+                GeminiRestClient.generateContentText(
+                    apiKey = apiKey,
+                    modelName = REST_FALLBACK_MODEL,
+                    systemInstruction = systemInstructionText,
+                    promptText = promptText,
+                    imageBitmap = imageBitmap,
+                    inlineBytes = inlineBytes,
+                    inlineMimeType = inlineMimeType,
+                    expectJson = expectJson,
+                    jsonSchemaHint = jsonSchemaHint,
+                    timeoutMs = fallbackTimeoutMs
+                )
             }
         }
     }
@@ -548,16 +679,17 @@ class ShasthoAiService {
                 Reply with ONE short empathetic follow-up question (or if 3+ turns are done, invite them to tap 'Generate Doctor Brief'). Keep it concise and non-diagnostic.
             """.trimIndent()
 
-            val response = generateWithFallback(
+            val reply = generateWithFallback(
                 label = "Symptom follow-up",
                 primaryModel = symptomChatModel,
                 fallbackModel = symptomChatFallbackModel,
+                systemInstructionText = symptomSystemInstructionText,
+                expectJson = false,
                 primaryTimeoutMs = TEXT_PRIMARY_TIMEOUT_MS,
                 fallbackTimeoutMs = TEXT_FALLBACK_TIMEOUT_MS,
-                requestContent = content { text(prompt) }
-            )
-            val reply = response.text?.trim()
-            if (!reply.isNullOrBlank()) {
+                promptText = prompt
+            ).trim()
+            if (reply.isNotBlank()) {
                 Result.success(reply)
             } else {
                 Result.failure(IllegalStateException("AI returned an empty reply."))
@@ -596,16 +728,18 @@ class ShasthoAiService {
                 $transcript
             """.trimIndent()
 
-            val response = generateWithFallback(
+            val jsonText = generateWithFallback(
                 label = "Doctor brief",
                 primaryModel = doctorBriefModel,
                 fallbackModel = doctorBriefFallbackModel,
+                systemInstructionText = doctorBriefSystemInstructionText,
+                expectJson = true,
+                jsonSchemaHint = """{"chiefSymptoms":"string","severityAndContext":"string","questionsForDoctor":["string"],"redFlagWarning":"string","urgentCareAdvised":false}""",
                 primaryTimeoutMs = TEXT_PRIMARY_TIMEOUT_MS,
                 fallbackTimeoutMs = TEXT_FALLBACK_TIMEOUT_MS,
-                requestContent = content { text(prompt) }
-            )
-            val jsonText = response.text?.trim()
-                ?: throw IllegalStateException("Empty doctor brief response.")
+                promptText = prompt
+            ).trim()
+            if (jsonText.isBlank()) throw IllegalStateException("Empty doctor brief response.")
             val json = JSONObject(jsonText)
             val qArray = json.optJSONArray("questionsForDoctor")
             val questions = buildList {
@@ -661,28 +795,26 @@ class ShasthoAiService {
             } else {
                 "Write warningMessage and specialNotes in concise English."
             }
-            val requestContent = content {
-                image(scaledBitmap)
-                text(
-                    """
-                    Analyze this medical prescription carefully and extract all visible medicines into JSON.
-                    Remember: In Bangladesh, 1+0+1 means Morning=true, Noon=false, Night=true. 0+0+1 means Night=true only. 1+1+1 means Morning, Noon, Night.
-                    Never hallucinate unreadable medicines — mark confidence Low if uncertain.
-                    $langNote
-                    """.trimIndent()
-                )
-            }
+            val prompt = """
+                Analyze this medical prescription carefully and extract all visible medicines into JSON.
+                Remember: In Bangladesh, 1+0+1 means Morning=true, Noon=false, Night=true. 0+0+1 means Night=true only. 1+1+1 means Morning, Noon, Night.
+                Never hallucinate unreadable medicines — mark confidence Low if uncertain.
+                $langNote
+            """.trimIndent()
 
-            val response = generateWithFallback(
+            val jsonText = generateWithFallback(
                 label = "Prescription analysis",
                 primaryModel = prescriptionModel,
                 fallbackModel = prescriptionFallbackModel,
+                systemInstructionText = prescriptionSystemInstructionText,
+                expectJson = true,
+                jsonSchemaHint = """{"overallClarity":"High|Medium|Low","warningMessage":"string","medicines":[{"name":"string","dosage":"string","morning":true,"noon":false,"night":true,"mealTiming":"Before Meal|After Meal|Anytime","durationDays":7,"specialNotes":"string","confidence":"High|Medium|Low"}]}""",
                 primaryTimeoutMs = VISION_PRIMARY_TIMEOUT_MS,
                 fallbackTimeoutMs = VISION_FALLBACK_TIMEOUT_MS,
-                requestContent = requestContent
-            )
-            val jsonText = response.text?.trim()
-                ?: throw IllegalStateException("Empty prescription response.")
+                promptText = prompt,
+                imageBitmap = scaledBitmap
+            ).trim()
+            if (jsonText.isBlank()) throw IllegalStateException("Empty prescription response.")
             val json = JSONObject(jsonText)
             val overallClarity = json.optString("overallClarity", "Medium")
             val warningMessage = json.optString("warningMessage", "")
@@ -760,16 +892,18 @@ class ShasthoAiService {
                 Keep portions practical, affordable, and everyday Bangladeshi home-cooked meals. General wellness guidance only.
             """.trimIndent()
 
-            val response = generateWithFallback(
+            val jsonText = generateWithFallback(
                 label = "Diet plan",
                 primaryModel = dietPlanModel,
                 fallbackModel = dietPlanFallbackModel,
+                systemInstructionText = dietPlanSystemInstructionText,
+                expectJson = true,
+                jsonSchemaHint = """{"breakfastTitle":"string","breakfastPortion":"string","breakfastRationale":"string","lunchTitle":"string","lunchPortion":"string","lunchRationale":"string","snackTitle":"string","snackPortion":"string","snackRationale":"string","dinnerTitle":"string","dinnerPortion":"string","dinnerRationale":"string","foodsToPrioritize":["string"],"foodsToLimit":["string"],"hydrationTip":"string"}""",
                 primaryTimeoutMs = TEXT_PRIMARY_TIMEOUT_MS,
                 fallbackTimeoutMs = TEXT_FALLBACK_TIMEOUT_MS,
-                requestContent = content { text(prompt) }
-            )
-            val jsonText = response.text?.trim()
-                ?: throw IllegalStateException("Empty diet plan response.")
+                promptText = prompt
+            ).trim()
+            if (jsonText.isBlank()) throw IllegalStateException("Empty diet plan response.")
             val json = JSONObject(jsonText)
             val prioritize = jsonArrayToList(json, "foodsToPrioritize")
             val limit = jsonArrayToList(json, "foodsToLimit")
@@ -826,16 +960,18 @@ class ShasthoAiService {
                 Provide an empathetic reflection, a 1-5 moodScore, one practical micro-action, and a gentle supportNote ONLY if significant distress is expressed (otherwise empty string "").
             """.trimIndent()
 
-            val response = generateWithFallback(
+            val jsonText = generateWithFallback(
                 label = "Mood analysis",
                 primaryModel = moodModel,
                 fallbackModel = moodFallbackModel,
+                systemInstructionText = moodSystemInstructionText,
+                expectJson = true,
+                jsonSchemaHint = """{"detectedMoodTag":"string","moodScore":3,"aiReflection":"string","microAction":"string","supportNote":"string"}""",
                 primaryTimeoutMs = TEXT_PRIMARY_TIMEOUT_MS,
                 fallbackTimeoutMs = TEXT_FALLBACK_TIMEOUT_MS,
-                requestContent = content { text(prompt) }
-            )
-            val jsonText = response.text?.trim()
-                ?: throw IllegalStateException("Empty mood reflection response.")
+                promptText = prompt
+            ).trim()
+            if (jsonText.isBlank()) throw IllegalStateException("Empty mood reflection response.")
             val json = JSONObject(jsonText)
             Result.success(
                 MoodAnalysisResult(
@@ -928,16 +1064,18 @@ class ShasthoAiService {
                 $userMessage
             """.trimIndent()
 
-            val response = generateWithFallback(
+            val jsonText = generateWithFallback(
                 label = "AI Command Bot",
                 primaryModel = assistantCommandModel,
                 fallbackModel = assistantCommandFallbackModel,
+                systemInstructionText = assistantCommandInstructionText,
+                expectJson = true,
+                jsonSchemaHint = """{"reply":"string","actionType":"NONE|NAVIGATE|ADD_REMINDER|MARK_REMINDER_TAKEN|SNOOZE_REMINDER|TOGGLE_LANGUAGE|ADD_REPORT|UPDATE_PROFILE|TEST_ALARM","targetScreen":"|HOME|SYMPTOMS|SCAN_RX|REMINDERS|DIET|MOOD|BMI|DATA_DASHBOARD|REPORTS|DOCTORS","medicineName":"string","dosage":"string","scheduledTime":"hh:mm AM/PM or empty","mealTiming":"Before Meal|After Meal|Anytime","durationDays":7,"reportTitle":"string","reportCategory":"LAB_TEST|PRESCRIPTION|IMAGING|DOCTOR_NOTE|OTHER","reportSummary":"string","profileAge":0,"profileLocation":"string","profileEmergencyNumber":"string"}""",
                 primaryTimeoutMs = TEXT_PRIMARY_TIMEOUT_MS,
                 fallbackTimeoutMs = TEXT_FALLBACK_TIMEOUT_MS,
-                requestContent = content { text(prompt) }
-            )
-            val jsonText = response.text?.trim()
-                ?: throw IllegalStateException("Empty assistant response.")
+                promptText = prompt
+            ).trim()
+            if (jsonText.isBlank()) throw IllegalStateException("Empty assistant response.")
             val json = JSONObject(jsonText)
             Result.success(
                 AiCommandResult(
@@ -985,19 +1123,19 @@ class ShasthoAiService {
                 "Write title, summary, and details in concise English."
             }
 
-            val response = generateWithFallback(
+            val jsonText = generateWithFallback(
                 label = "Medical report OCR",
                 primaryModel = reportExtractModel,
                 fallbackModel = reportExtractFallbackModel,
+                systemInstructionText = reportExtractInstructionText,
+                expectJson = true,
+                jsonSchemaHint = """{"title":"string","category":"LAB_TEST|PRESCRIPTION|IMAGING|DOCTOR_NOTE|OTHER","doctorOrLab":"string","summary":"string","details":"string"}""",
                 primaryTimeoutMs = VISION_PRIMARY_TIMEOUT_MS,
                 fallbackTimeoutMs = VISION_FALLBACK_TIMEOUT_MS,
-                requestContent = content {
-                    image(scaledBitmap)
-                    text("Extract the medical report metadata, key findings summary, and readable values into JSON. $langNote")
-                }
-            )
-            val jsonText = response.text?.trim()
-                ?: throw IllegalStateException("Empty report extraction response.")
+                promptText = "Extract the medical report metadata, key findings summary, and readable values into JSON. $langNote",
+                imageBitmap = scaledBitmap
+            ).trim()
+            if (jsonText.isBlank()) throw IllegalStateException("Empty report extraction response.")
             val json = JSONObject(jsonText)
             Result.success(
                 MedicalReport(
@@ -1077,16 +1215,18 @@ class ShasthoAiService {
                 Provide an encouraging title, a 0-100 wellness score reflecting their current habits, a clear 3-4 sentence summary of their overall life condition, and exactly 3 practical daily tips.
             """.trimIndent()
 
-            val response = generateWithFallback(
+            val jsonText = generateWithFallback(
                 label = "Life condition summary",
                 primaryModel = lifeConditionModel,
                 fallbackModel = lifeConditionFallbackModel,
+                systemInstructionText = lifeConditionInstructionText,
+                expectJson = true,
+                jsonSchemaHint = """{"title":"string","score":75,"summary":"string","tips":["string","string","string"]}""",
                 primaryTimeoutMs = TEXT_PRIMARY_TIMEOUT_MS,
                 fallbackTimeoutMs = TEXT_FALLBACK_TIMEOUT_MS,
-                requestContent = content { text(prompt) }
-            )
-            val jsonText = response.text?.trim()
-                ?: throw IllegalStateException("Empty life condition summary response.")
+                promptText = prompt
+            ).trim()
+            if (jsonText.isBlank()) throw IllegalStateException("Empty life condition summary response.")
             val json = JSONObject(jsonText)
             val tips = jsonArrayToList(json, "tips").take(5)
             Result.success(
@@ -1124,26 +1264,26 @@ class ShasthoAiService {
                 "Write title, summary, details, and followUpReply in clear, empathetic English."
             }
             val safeMime = mimeType.trim().lowercase(java.util.Locale.US)
-            val requestContent = when {
+            val promptText: String
+            var attachmentBitmap: Bitmap? = null
+            var attachmentBytes: ByteArray? = null
+            var attachmentMime: String? = null
+
+            when {
                 bitmap != null -> {
                     val scaled = withContext(Dispatchers.Default) {
                         prepareBitmapForVision(bitmap, maxDim = 800)
                     }
                     if (scaled !== bitmap) preparedBitmap = scaled
-                    content {
-                        image(scaled)
-                        text(
-                            "The patient uploaded an image file named '$fileName' ($attachmentType) during symptom check-in. Extract key visual/text details for their Medical Reports Vault and write a gentle non-diagnostic follow-up reply. $langInstruction"
-                        )
-                    }
+                    attachmentBitmap = scaled
+                    promptText =
+                        "The patient uploaded an image file named '$fileName' ($attachmentType) during symptom check-in. Extract key visual/text details for their Medical Reports Vault and write a gentle non-diagnostic follow-up reply. $langInstruction"
                 }
                 bytes != null && isDirectlySupportedInlineMime(safeMime) -> {
-                    content {
-                        inlineData(bytes, safeMime)
-                        text(
-                            "The patient uploaded a $attachmentType attachment named '$fileName' (MIME: $safeMime) during symptom check-in. Listen/read it carefully, extract key symptom notes or medical report values for their Medical Reports Vault, and write an empathetic non-diagnostic follow-up reply. $langInstruction"
-                        )
-                    }
+                    attachmentBytes = bytes
+                    attachmentMime = safeMime
+                    promptText =
+                        "The patient uploaded a $attachmentType attachment named '$fileName' (MIME: $safeMime) during symptom check-in. Listen/read it carefully, extract key symptom notes or medical report values for their Medical Reports Vault, and write an empathetic non-diagnostic follow-up reply. $langInstruction"
                 }
                 bytes != null -> {
                     val textExcerpt = runCatching {
@@ -1153,32 +1293,33 @@ class ShasthoAiService {
                             .trim()
                             .take(3000)
                     }.getOrDefault("")
-                    content {
-                        text(
-                            """
-                            The patient uploaded a file named '$fileName' (type: $attachmentType, MIME: $safeMime).
-                            Extracted readable text preview (may be partial for binary office docs):
-                            ${textExcerpt.ifBlank { "(Binary document attached — ask patient to describe key details for their doctor.)" }}
+                    promptText = """
+                        The patient uploaded a file named '$fileName' (type: $attachmentType, MIME: $safeMime).
+                        Extracted readable text preview (may be partial for binary office docs):
+                        ${textExcerpt.ifBlank { "(Binary document attached — ask patient to describe key details for their doctor.)" }}
 
-                            Summarize what is available for the patient's Medical Reports Vault without inventing any unseen values, and ask one gentle follow-up question.
-                            $langInstruction
-                            """.trimIndent()
-                        )
-                    }
+                        Summarize what is available for the patient's Medical Reports Vault without inventing any unseen values, and ask one gentle follow-up question.
+                        $langInstruction
+                    """.trimIndent()
                 }
                 else -> throw IllegalArgumentException("Attachment data is empty.")
             }
 
-            val response = generateWithFallback(
+            val jsonText = generateWithFallback(
                 label = "Symptom attachment analysis ($attachmentType)",
                 primaryModel = symptomAttachmentModel,
                 fallbackModel = symptomAttachmentFallbackModel,
+                systemInstructionText = symptomAttachmentInstructionText,
+                expectJson = true,
+                jsonSchemaHint = """{"title":"string","category":"LAB_TEST|PRESCRIPTION|IMAGING|DOCTOR_NOTE|OTHER","summary":"string","details":"string","followUpReply":"string"}""",
                 primaryTimeoutMs = VISION_PRIMARY_TIMEOUT_MS,
                 fallbackTimeoutMs = VISION_FALLBACK_TIMEOUT_MS,
-                requestContent = requestContent
-            )
-            val jsonText = response.text?.trim()
-                ?: throw IllegalStateException("Empty attachment analysis response.")
+                promptText = promptText,
+                imageBitmap = attachmentBitmap,
+                inlineBytes = attachmentBytes,
+                inlineMimeType = attachmentMime
+            ).trim()
+            if (jsonText.isBlank()) throw IllegalStateException("Empty attachment analysis response.")
             val json = JSONObject(jsonText)
             val rawCategory = json.optString("category", "DOCTOR_NOTE")
             val safeCategory = if (rawCategory in listOf("LAB_TEST", "PRESCRIPTION", "IMAGING", "DOCTOR_NOTE", "OTHER")) {
