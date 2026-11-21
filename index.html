@@ -897,17 +897,58 @@
         renderQr();
       }
 
-      async function probeDirectUrl(url) {
+      function getPartFileName(part) {
+        if (!part) return "";
+        return part.name || part.file || "";
+      }
+
+      function getManifestFileName(manifest) {
+        return (manifest && (manifest.fileName || manifest.filename)) || "ShasthoSathi-AI-v1.4.apk";
+      }
+
+      function getManifestVersion(manifest) {
+        return (manifest && (manifest.versionName || manifest.version)) || "1.4";
+      }
+
+      async function probeBinaryWithRange(url, requireApkZipHeader) {
         try {
-          const res = await fetch(url, { method: "HEAD", cache: "no-store" });
+          const res = await fetch(url, {
+            method: "GET",
+            headers: { Range: "bytes=0-3" },
+            cache: "no-store"
+          });
           if (!res.ok) return false;
           const ct = (res.headers.get("content-type") || "").toLowerCase();
           if (ct.includes("text/html")) return false;
-          const cl = parseInt(res.headers.get("content-length") || "0", 10);
-          return cl === 0 || cl > 1000000;
+          const buf = await res.arrayBuffer();
+          const bytes = new Uint8Array(buf);
+          if (bytes.length < 2) return false;
+          if (requireApkZipHeader) {
+            return bytes[0] === 0x50 && bytes[1] === 0x4b; // 'P' 'K' ZIP/APK magic bytes
+          }
+          return true;
         } catch (_) {
           return false;
         }
+      }
+
+      async function probeDirectUrl(url) {
+        try {
+          const res = await fetch(url, { method: "HEAD", cache: "no-store" });
+          if (res.ok) {
+            const ct = (res.headers.get("content-type") || "").toLowerCase();
+            if (!ct.includes("text/html")) {
+              const cl = parseInt(res.headers.get("content-length") || "0", 10);
+              if (cl > 1000000) return true;
+              if (cl === 0 && (ct.includes("android.package-archive") || ct.includes("octet-stream"))) {
+                return true;
+              }
+            }
+          }
+        } catch (_) {
+          // Fall through to Range GET check
+        }
+        return probeBinaryWithRange(url, true);
       }
 
       async function probePartsManifest(manifestUrl) {
@@ -920,14 +961,25 @@
           if (!manifest || !Array.isArray(manifest.parts) || manifest.parts.length === 0) {
             return null;
           }
+          const firstName = getPartFileName(manifest.parts[0]);
+          if (!firstName) return null;
           const baseUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf("/") + 1);
-          const firstRes = await fetch(baseUrl + manifest.parts[0].name, {
-            method: "HEAD",
-            cache: "no-store"
-          });
-          if (!firstRes.ok) return null;
-          const firstCt = (firstRes.headers.get("content-type") || "").toLowerCase();
-          if (firstCt.includes("text/html")) return null;
+          const firstUrl = baseUrl + firstName;
+
+          let firstOk = false;
+          try {
+            const firstRes = await fetch(firstUrl, { method: "HEAD", cache: "no-store" });
+            if (firstRes.ok) {
+              const firstCt = (firstRes.headers.get("content-type") || "").toLowerCase();
+              firstOk = !firstCt.includes("text/html");
+            }
+          } catch (_) {
+            firstOk = false;
+          }
+          if (!firstOk) {
+            firstOk = await probeBinaryWithRange(firstUrl, true);
+          }
+          if (!firstOk) return null;
           return { mode: "parts", baseUrl: baseUrl, manifest: manifest };
         } catch (_) {
           return null;
@@ -987,12 +1039,15 @@
 
       async function startApkDownload() {
         if (isDownloading) return;
-        const src = resolvedSource || (await detectApkSource());
+        let src = resolvedSource;
+        if (!src || src.mode === "missing") {
+          src = await detectApkSource();
+        }
         const dict = translations[lang];
 
         if (src.mode === "direct" || src.mode === "file_protocol") {
           showToast(dict.startingToast);
-          triggerBrowserDownload(src.url, "ShasthoSathi-AI.apk");
+          triggerBrowserDownload(src.url, "ShasthoSathi-AI-v1.4.apk");
           return;
         }
 
@@ -1013,11 +1068,13 @@
 
             for (let i = 0; i < parts.length; i++) {
               const part = parts[i];
+              const partName = getPartFileName(part);
+              if (!partName) throw new Error("Missing part filename at index " + i);
               progressLabel.textContent =
                 (lang === "bn" ? "ডাউনলোড হচ্ছে অংশ " : "Downloading part ") +
                 (i + 1) + "/" + parts.length + "...";
-              const ver = encodeURIComponent(src.manifest.versionName || "1.1");
-              const resp = await fetch(src.baseUrl + part.name + "?v=" + ver, { cache: "no-store" });
+              const ver = encodeURIComponent(getManifestVersion(src.manifest));
+              const resp = await fetch(src.baseUrl + partName + "?v=" + ver, { cache: "no-store" });
               if (!resp.ok) throw new Error("Part " + (i + 1) + " HTTP " + resp.status);
               const buf = await resp.arrayBuffer();
               buffers.push(buf);
@@ -1032,7 +1089,7 @@
             progressBarFill.style.width = "100%";
             progressPct.textContent = "100%";
             progressLabel.textContent = lang === "bn" ? "সম্পন্ন! সেভ হচ্ছে..." : "Complete! Saving APK...";
-            triggerBrowserDownload(blobUrl, src.manifest.fileName || "ShasthoSathi-AI.apk");
+            triggerBrowserDownload(blobUrl, getManifestFileName(src.manifest));
             showToast(dict.assembledToast);
             setTimeout(function () {
               URL.revokeObjectURL(blobUrl);

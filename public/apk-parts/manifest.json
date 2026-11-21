@@ -1,26 +1,33 @@
 {
+  "fileName": "ShasthoSathi-AI-v1.4.apk",
   "filename": "ShasthoSathi-AI-v1.4.apk",
+  "versionName": "1.4",
   "version": "1.4",
   "totalBytes": 33656032,
   "sha256": "d48904ec6de3f6009275701ab8d2db729a7c228f82afd16ff753480f39f82a8c",
   "parts": [
     {
+      "name": "ShasthoSathi-AI.apk.part000.bin",
       "file": "ShasthoSathi-AI.apk.part000.bin",
       "size": 7340032
     },
     {
+      "name": "ShasthoSathi-AI.apk.part001.bin",
       "file": "ShasthoSathi-AI.apk.part001.bin",
       "size": 7340032
     },
     {
+      "name": "ShasthoSathi-AI.apk.part002.bin",
       "file": "ShasthoSathi-AI.apk.part002.bin",
       "size": 7340032
     },
     {
+      "name": "ShasthoSathi-AI.apk.part003.bin",
       "file": "ShasthoSathi-AI.apk.part003.bin",
       "size": 7340032
     },
     {
+      "name": "ShasthoSathi-AI.apk.part004.bin",
       "file": "ShasthoSathi-AI.apk.part004.bin",
       "size": 4295904
     }

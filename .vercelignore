@@ -1,0 +1,23 @@
+# Exclude Android source, Gradle caches, and build outputs from Vercel static deploys
+app/
+build/
+gradle/
+.gradle/
+.kotlin/
+.aistudio/
+.build-outputs/
+.idea/
+*.gradle
+*.gradle.kts
+*.properties
+*.keystore
+*.keystore.base64
+*.jks
+*.iml
+.env
+.env.*
+firebase.json
+firebase-blueprint.json
+firestore.rules
+firestore.test.js
+metadata.json
