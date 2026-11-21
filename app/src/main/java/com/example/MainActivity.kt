@@ -121,6 +121,14 @@ class MainActivity : ComponentActivity() {
             ShasthoSathiAppRoot()
         }
     }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (!intent.getStringExtra("FIREBASE_APPCHECK_DEBUG_TOKEN").isNullOrBlank()) {
+            configureAppCheck(this, intent)
+        }
+    }
 }
 
 @Composable
