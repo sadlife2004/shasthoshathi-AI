@@ -553,10 +553,10 @@ class ShasthoAiService {
             if (isAppCheckError(e)) {
                 Log.e(AI_TAG, "$label App Check error (${AppCheckDiagnostics.activeProvider}): ${e.localizedMessage}", e)
                 val debugSecret = AppCheckDiagnostics.currentDebugSecret
-                val hint = if (!debugSecret.isNullOrBlank()) {
+                val hint = if (AppCheckDiagnostics.activeProvider == "DebugAppCheckProvider" && !debugSecret.isNullOrBlank()) {
                     "App Check Debug Token not allow-listed yet. Open Profile → Copy Debug Token and add it in Firebase Console → App Check → Manage debug tokens:\n$debugSecret"
                 } else {
-                    "App Check (${AppCheckDiagnostics.activeProvider}): ${e.localizedMessage ?: "Verification failed."}"
+                    "App Check (${AppCheckDiagnostics.activeProvider}): ${e.localizedMessage ?: "Verification failed. Please check internet/Google Play Services and try again."}"
                 }
                 throw IllegalStateException(hint, e)
             }

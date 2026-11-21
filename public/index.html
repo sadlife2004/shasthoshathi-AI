@@ -584,7 +584,7 @@
               <h1 data-i18n="heroTitle">ShasthoSathi AI</h1>
               <div class="badge-row">
                 <span class="badge">Android APK</span>
-                <span class="badge">v1.4</span>
+                <span class="badge">v1.5</span>
                 <span class="badge">Android 7.0+</span>
                 <span class="badge" data-i18n="bilingualBadge">English &amp; বাংলা</span>
               </div>
@@ -904,11 +904,11 @@
       }
 
       function getManifestFileName(manifest) {
-        return (manifest && (manifest.fileName || manifest.filename)) || "ShasthoSathi-AI-v1.4.apk";
+        return (manifest && (manifest.fileName || manifest.filename)) || "ShasthoSathi-AI-v1.5.apk";
       }
 
       function getManifestVersion(manifest) {
-        return (manifest && (manifest.versionName || manifest.version)) || "1.4";
+        return (manifest && (manifest.versionName || manifest.version)) || "1.5";
       }
 
       async function probeBinaryWithRange(url, requireApkZipHeader) {
@@ -995,10 +995,10 @@
         }
 
         const directCandidates = [
-          "./ShasthoSathi-AI.apk?v=1.4",
-          "/ShasthoSathi-AI.apk?v=1.4",
-          "./public/ShasthoSathi-AI.apk?v=1.4",
-          "/public/ShasthoSathi-AI.apk?v=1.4"
+          "./ShasthoSathi-AI.apk?v=1.5",
+          "/ShasthoSathi-AI.apk?v=1.5",
+          "./public/ShasthoSathi-AI.apk?v=1.5",
+          "/public/ShasthoSathi-AI.apk?v=1.5"
         ];
         for (let i = 0; i < directCandidates.length; i++) {
           if (await probeDirectUrl(directCandidates[i])) {
@@ -1009,10 +1009,10 @@
         }
 
         const manifestCandidates = [
-          "./apk-parts/manifest.json?v=1.4",
-          "/apk-parts/manifest.json?v=1.4",
-          "./public/apk-parts/manifest.json?v=1.4",
-          "/public/apk-parts/manifest.json?v=1.4"
+          "./apk-parts/manifest.json?v=1.5",
+          "/apk-parts/manifest.json?v=1.5",
+          "./public/apk-parts/manifest.json?v=1.5",
+          "/public/apk-parts/manifest.json?v=1.5"
         ];
         for (let i = 0; i < manifestCandidates.length; i++) {
           const found = await probePartsManifest(manifestCandidates[i]);
@@ -1048,7 +1048,7 @@
 
         if (src.mode === "direct" || src.mode === "file_protocol") {
           showToast(dict.startingToast);
-          triggerBrowserDownload(src.url, "ShasthoSathi-AI-v1.4.apk");
+          triggerBrowserDownload(src.url, "ShasthoSathi-AI-v1.5.apk");
           return;
         }
 

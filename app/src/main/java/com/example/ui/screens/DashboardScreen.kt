@@ -85,8 +85,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.BuildConfig
+import androidx.compose.material.icons.automirrored.filled.Logout
+import com.example.data.firebase.AppCheckDiagnostics
 import com.example.data.firebase.applyCustomAppCheckDebugSecret
 import com.example.data.firebase.getCurrentAppCheckDebugSecret
+import com.example.data.firebase.switchToAutomaticAppCheck
 import com.example.data.model.HealthMetricsRecord
 import com.example.data.model.MedicineReminder
 import com.example.data.model.MoodEntry
@@ -986,7 +989,7 @@ private fun EditableProfileSheetContent(
             shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, CoralHeart.copy(alpha = 0.5f))
         ) {
-            Icon(Icons.Filled.Logout, contentDescription = null, tint = CoralHeart, modifier = Modifier.size(16.dp))
+            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = CoralHeart, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
             Text(strings.signOut, color = CoralHeart)
         }
@@ -999,6 +1002,7 @@ private fun EditableProfileSheetContent(
 private fun AppCheckDebugTokenCard(language: AppLanguage) {
     val context = LocalContext.current
     val isBn = language == AppLanguage.BN
+    var activeProvider by remember { mutableStateOf(AppCheckDiagnostics.activeProvider) }
     var debugToken by remember { mutableStateOf(getCurrentAppCheckDebugSecret(context)) }
     var customInput by remember { mutableStateOf("") }
 
@@ -1025,7 +1029,7 @@ private fun AppCheckDebugTokenCard(language: AppLanguage) {
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = if (isBn) "Firebase App Check ডিবাগ টোকেন" else "Firebase App Check Debug Token",
+                    text = if (isBn) "Firebase App Check স্ট্যাটাস" else "Firebase App Check Status",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = TealDeep
@@ -1033,13 +1037,37 @@ private fun AppCheckDebugTokenCard(language: AppLanguage) {
             }
             Text(
                 text = if (isBn) {
-                    "নিচের টোকেনটি কপি করে Firebase Console → Project (gen-lang-client-0229047245) → App Check → Apps → com.aistudio.shasthosathi.kxmzqr → Manage debug tokens → Add debug token-এ পেস্ট করুন।"
+                    "চালু প্রোভাইডার: $activeProvider (অটোমেটিক reCAPTCHA মোডে আলাদা ডিবাগ টোকেন লাগে না।)"
                 } else {
-                    "Copy this token and paste it into Firebase Console → Project (gen-lang-client-0229047245) → App Check → Apps → com.aistudio.shasthosathi.kxmzqr → Manage debug tokens → Add debug token."
+                    "Active provider: $activeProvider (Automatic reCAPTCHA mode works without manual debug tokens.)"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            if (activeProvider == "DebugAppCheckProvider") {
+                Button(
+                    onClick = {
+                        if (switchToAutomaticAppCheck(context)) {
+                            activeProvider = AppCheckDiagnostics.activeProvider
+                            Toast.makeText(
+                                context,
+                                if (isBn) "অটোমেটিক reCAPTCHA চালু হয়েছে!" else "Switched to Automatic reCAPTCHA!",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .testTag("switch_automatic_appcheck_button"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = TealDeep)
+                ) {
+                    Text(if (isBn) "অটোমেটিক মোডে ফিরে যান (reCAPTCHA)" else "Switch to Automatic Mode (reCAPTCHA)")
+                }
+            }
+
             Surface(
                 shape = RoundedCornerShape(10.dp),
                 color = MaterialTheme.colorScheme.surface,
@@ -1054,7 +1082,7 @@ private fun AppCheckDebugTokenCard(language: AppLanguage) {
                         .testTag("appcheck_debug_token_value")
                 )
             }
-            Button(
+            OutlinedButton(
                 onClick = {
                     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                     cm?.setPrimaryClip(ClipData.newPlainText("Firebase App Check Debug Token", debugToken))
@@ -1068,12 +1096,11 @@ private fun AppCheckDebugTokenCard(language: AppLanguage) {
                     .fillMaxWidth()
                     .height(48.dp)
                     .testTag("copy_appcheck_debug_token_button"),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = TealDeep)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(if (isBn) "ডিবাগ টোকেন কপি করুন" else "Copy Debug Token")
+                Text(if (isBn) "ডিবাগ টোকেন কপি করুন (ঐচ্ছিক)" else "Copy Debug Token (Optional)")
             }
 
             OutlinedTextField(
@@ -1081,8 +1108,8 @@ private fun AppCheckDebugTokenCard(language: AppLanguage) {
                 onValueChange = { customInput = it },
                 label = {
                     Text(
-                        if (isBn) "অথবা Firebase Console থেকে টোকেন পেস্ট করুন"
-                        else "Or paste token from Firebase Console"
+                        if (isBn) "অথবা Firebase Console টোকেন পেস্ট করুন"
+                        else "Or paste allow-listed Firebase Console token"
                     )
                 },
                 singleLine = true,
@@ -1093,10 +1120,11 @@ private fun AppCheckDebugTokenCard(language: AppLanguage) {
                 onClick = {
                     if (applyCustomAppCheckDebugSecret(context, customInput)) {
                         debugToken = getCurrentAppCheckDebugSecret(context)
+                        activeProvider = AppCheckDiagnostics.activeProvider
                         customInput = ""
                         Toast.makeText(
                             context,
-                            if (isBn) "নতুন ডিবাগ টোকেন চালু হয়েছে!" else "Debug token saved & activated!",
+                            if (isBn) "কাস্টম ডিবাগ টোকেন চালু হয়েছে!" else "Custom debug token activated!",
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {
@@ -1114,7 +1142,7 @@ private fun AppCheckDebugTokenCard(language: AppLanguage) {
                     .testTag("apply_custom_appcheck_token_button"),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text(if (isBn) "টোকেন সেভ ও চালু করুন" else "Save & Activate Token")
+                Text(if (isBn) "কাস্টম টোকেন চালু করুন" else "Activate Custom Token")
             }
         }
     }
