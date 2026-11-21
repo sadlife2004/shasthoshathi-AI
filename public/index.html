@@ -584,7 +584,7 @@
               <h1 data-i18n="heroTitle">ShasthoSathi AI</h1>
               <div class="badge-row">
                 <span class="badge">Android APK</span>
-                <span class="badge">v1.0</span>
+                <span class="badge">v1.1</span>
                 <span class="badge">Android 7.0+</span>
                 <span class="badge" data-i18n="bilingualBadge">English &amp; বাংলা</span>
               </div>
@@ -943,10 +943,10 @@
         }
 
         const directCandidates = [
-          "./ShasthoSathi-AI.apk",
-          "/ShasthoSathi-AI.apk",
-          "./public/ShasthoSathi-AI.apk",
-          "/public/ShasthoSathi-AI.apk"
+          "./ShasthoSathi-AI.apk?v=1.1",
+          "/ShasthoSathi-AI.apk?v=1.1",
+          "./public/ShasthoSathi-AI.apk?v=1.1",
+          "/public/ShasthoSathi-AI.apk?v=1.1"
         ];
         for (let i = 0; i < directCandidates.length; i++) {
           if (await probeDirectUrl(directCandidates[i])) {
@@ -957,10 +957,10 @@
         }
 
         const manifestCandidates = [
-          "./apk-parts/manifest.json",
-          "/apk-parts/manifest.json",
-          "./public/apk-parts/manifest.json",
-          "/public/apk-parts/manifest.json"
+          "./apk-parts/manifest.json?v=1.1",
+          "/apk-parts/manifest.json?v=1.1",
+          "./public/apk-parts/manifest.json?v=1.1",
+          "/public/apk-parts/manifest.json?v=1.1"
         ];
         for (let i = 0; i < manifestCandidates.length; i++) {
           const found = await probePartsManifest(manifestCandidates[i]);
@@ -1017,7 +1017,8 @@
               progressLabel.textContent =
                 (lang === "bn" ? "ডাউনলোড হচ্ছে অংশ " : "Downloading part ") +
                 (i + 1) + "/" + parts.length + "...";
-              const resp = await fetch(src.baseUrl + part.name, { cache: "no-store" });
+              const ver = encodeURIComponent(src.manifest.versionName || "1.1");
+              const resp = await fetch(src.baseUrl + part.name + "?v=" + ver, { cache: "no-store" });
               if (!resp.ok) throw new Error("Part " + (i + 1) + " HTTP " + resp.status);
               const buf = await resp.arrayBuffer();
               buffers.push(buf);

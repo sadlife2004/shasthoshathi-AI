@@ -31,11 +31,20 @@
         },
         {
           "key": "Content-Disposition",
-          "value": "attachment; filename=\"ShasthoSathi-AI.apk\""
+          "value": "attachment; filename=\"ShasthoSathi-AI-v1.1.apk\""
         },
         {
           "key": "Cache-Control",
-          "value": "public, max-age=3600"
+          "value": "no-store, no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/apk-parts/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate"
         }
       ]
     },
@@ -45,10 +54,6 @@
         {
           "key": "Content-Type",
           "value": "application/octet-stream"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400"
         }
       ]
     }

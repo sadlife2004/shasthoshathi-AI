@@ -18,6 +18,8 @@ import com.example.data.model.PrescriptionAnalysisResult
 import com.example.data.model.SymptomAttachmentAnalysis
 import com.example.data.model.SymptomChatMessage
 import com.example.data.model.UserProfile
+import com.example.data.firebase.AppCheckDiagnostics
+import com.example.data.firebase.forceRefreshAppCheckToken
 import com.example.i18n.AppLanguage
 import com.google.firebase.Firebase
 import com.google.firebase.ai.GenerativeModel
@@ -478,6 +480,11 @@ class ShasthoAiService {
 
     // --- Resilient Model Execution Helper ---
 
+    private fun isAppCheckError(t: Throwable): Boolean {
+        val msg = (t.message ?: t.localizedMessage ?: "").lowercase()
+        return msg.contains("app check") || msg.contains("appcheck") || msg.contains("token is invalid") || msg.contains("403")
+    }
+
     private suspend fun generateWithFallback(
         label: String,
         primaryModel: GenerativeModel,
@@ -498,6 +505,29 @@ class ShasthoAiService {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            if (isAppCheckError(e)) {
+                Log.w(AI_TAG, "$label hit App Check error on $PRIMARY_MODEL; forcing App Check token refresh...", e)
+                val refreshErr = forceRefreshAppCheckToken()
+                if (refreshErr != null) {
+                    Log.e(AI_TAG, "App Check refresh failed (${AppCheckDiagnostics.activeProvider}): $refreshErr")
+                }
+                return try {
+                    withTimeout(primaryTimeoutMs) {
+                        primaryModel.generateContent(requestContent)
+                    }
+                } catch (retryErr: CancellationException) {
+                    throw retryErr
+                } catch (retryErr: Exception) {
+                    val detail = AppCheckDiagnostics.lastTokenError
+                    if (isAppCheckError(retryErr) && !detail.isNullOrBlank()) {
+                        throw IllegalStateException(
+                            "Firebase App Check (${AppCheckDiagnostics.activeProvider}) failed: $detail",
+                            retryErr
+                        )
+                    }
+                    throw retryErr
+                }
+            }
             Log.w(AI_TAG, "$label failed on $PRIMARY_MODEL (${e.localizedMessage}); retrying with $FALLBACK_MODEL", e)
             withTimeout(fallbackTimeoutMs) {
                 fallbackModel.generateContent(requestContent)
