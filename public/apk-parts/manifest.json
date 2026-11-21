@@ -1,0 +1,29 @@
+{
+  "fileName": "ShasthoSathi-AI.apk",
+  "packageName": "com.aistudio.shasthosathi.kxmzqr",
+  "versionName": "1.0",
+  "totalBytes": 33623264,
+  "sha256": "ff599c6de97e199eb0bbcbf90c10db7b27394b9ca3d5d3a6e00d34bc12b8651d",
+  "parts": [
+    {
+      "name": "shasthosathi-part-01.bin",
+      "size": 7340032
+    },
+    {
+      "name": "shasthosathi-part-02.bin",
+      "size": 7340032
+    },
+    {
+      "name": "shasthosathi-part-03.bin",
+      "size": 7340032
+    },
+    {
+      "name": "shasthosathi-part-04.bin",
+      "size": 7340032
+    },
+    {
+      "name": "shasthosathi-part-05.bin",
+      "size": 4263136
+    }
+  ]
+}

@@ -11,6 +11,10 @@
       --primary: #00796b;
       --primary-dark: #005b4f;
       --primary-soft: #e0f2f1;
+      --success-bg: #e8f5e9;
+      --success-text: #1b5e20;
+      --warn-bg: #fff8e1;
+      --warn-text: #8d4e00;
       --bg: #f6faf9;
       --surface: #ffffff;
       --text: #102a27;
@@ -39,7 +43,7 @@
     }
 
     .topbar {
-      max-width: 960px;
+      max-width: 980px;
       margin: 0 auto;
       padding: 18px 20px;
       display: flex;
@@ -83,9 +87,9 @@
     }
 
     .container {
-      max-width: 960px;
+      max-width: 980px;
       margin: 0 auto;
-      padding: 12px 20px 56px;
+      padding: 10px 20px 56px;
     }
 
     .hero-card {
@@ -93,8 +97,7 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      padding: 36px 28px;
-      text-align: center;
+      padding: 32px 28px;
       position: relative;
       overflow: hidden;
     }
@@ -107,13 +110,31 @@
       background: linear-gradient(90deg, #00796b, #14b8a6, #0ea5a4);
     }
 
+    .hero-layout {
+      display: grid;
+      grid-template-columns: 1.35fr 0.85fr;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .hero-main {
+      text-align: left;
+    }
+
+    .app-header-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
     .app-icon-wrap {
-      width: 96px;
-      height: 96px;
-      margin: 0 auto 18px;
-      border-radius: 24px;
+      width: 78px;
+      height: 78px;
+      flex-shrink: 0;
+      border-radius: 20px;
       overflow: hidden;
-      box-shadow: 0 14px 30px rgba(0, 121, 107, 0.24);
+      box-shadow: 0 12px 26px rgba(0, 121, 107, 0.24);
       border: 3px solid #ffffff;
       background: var(--primary-soft);
     }
@@ -126,44 +147,71 @@
     }
 
     .badge-row {
-      display: inline-flex;
+      display: flex;
       flex-wrap: wrap;
-      justify-content: center;
-      gap: 8px;
-      margin-bottom: 14px;
+      gap: 6px;
+      margin-top: 6px;
     }
 
     .badge {
       background: var(--primary-soft);
       color: var(--primary-dark);
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       font-weight: 700;
-      padding: 5px 12px;
+      padding: 4px 10px;
       border-radius: 999px;
       letter-spacing: 0.02em;
     }
 
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--success-bg);
+      color: var(--success-text);
+      margin-bottom: 14px;
+    }
+
+    .status-pill.checking {
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+    }
+
+    .status-pill.warn {
+      background: var(--warn-bg);
+      color: var(--warn-text);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
     h1 {
-      font-size: clamp(1.75rem, 4vw, 2.4rem);
+      font-size: clamp(1.55rem, 3.2vw, 2.2rem);
       font-weight: 800;
       letter-spacing: -0.02em;
-      margin-bottom: 10px;
+      line-height: 1.2;
       color: var(--text);
     }
 
     .subtitle {
-      max-width: 600px;
-      margin: 0 auto 26px;
       color: var(--muted);
-      font-size: 1rem;
+      font-size: 0.96rem;
+      margin-bottom: 20px;
     }
 
     .cta-group {
       display: flex;
       flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px;
-      margin-bottom: 18px;
+      gap: 10px;
+      margin-bottom: 14px;
     }
 
     .download-btn {
@@ -173,19 +221,27 @@
       gap: 10px;
       background: linear-gradient(135deg, var(--primary), #0d9488);
       color: #ffffff;
+      border: none;
       text-decoration: none;
       font-weight: 700;
-      font-size: 1.05rem;
-      padding: 15px 28px;
-      border-radius: 16px;
+      font-size: 1rem;
+      padding: 14px 24px;
+      border-radius: 15px;
       box-shadow: 0 12px 26px rgba(0, 121, 107, 0.28);
-      transition: transform 0.16s ease, box-shadow 0.2s ease;
-      min-height: 54px;
+      cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+      min-height: 52px;
     }
 
     .download-btn:hover {
       transform: translateY(-2px);
       box-shadow: 0 16px 32px rgba(0, 121, 107, 0.34);
+    }
+
+    .download-btn:disabled {
+      opacity: 0.72;
+      cursor: wait;
+      transform: none;
     }
 
     .secondary-btn {
@@ -197,12 +253,12 @@
       color: var(--primary-dark);
       border: 1.5px solid var(--border);
       font-weight: 600;
-      font-size: 0.95rem;
-      padding: 14px 20px;
-      border-radius: 16px;
+      font-size: 0.92rem;
+      padding: 12px 18px;
+      border-radius: 15px;
       cursor: pointer;
       transition: background 0.2s ease, border-color 0.2s ease;
-      min-height: 54px;
+      min-height: 52px;
     }
 
     .secondary-btn:hover {
@@ -210,24 +266,60 @@
       border-color: var(--primary);
     }
 
+    .progress-wrap {
+      display: none;
+      margin: 12px 0 14px;
+      background: #edf7f5;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+    }
+
+    .progress-wrap.active {
+      display: block;
+    }
+
+    .progress-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-track {
+      width: 100%;
+      height: 9px;
+      border-radius: 999px;
+      background: #cfe5e1;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #00796b, #14b8a6);
+      border-radius: 999px;
+      transition: width 0.2s ease;
+    }
+
     .meta-strip {
       display: flex;
       flex-wrap: wrap;
-      justify-content: center;
-      gap: 18px;
-      font-size: 0.86rem;
+      gap: 14px;
+      font-size: 0.82rem;
       color: var(--muted);
       margin-top: 8px;
     }
 
     .direct-link-box {
-      margin: 22px auto 0;
-      max-width: 560px;
+      margin-top: 14px;
       background: #f1f8f7;
       border: 1px dashed #9cc7c1;
       border-radius: 14px;
-      padding: 12px 14px;
-      font-size: 0.85rem;
+      padding: 10px 13px;
+      font-size: 0.82rem;
       color: var(--muted);
       word-break: break-all;
     }
@@ -236,6 +328,87 @@
       color: var(--primary-dark);
       font-weight: 700;
       text-decoration: underline;
+    }
+
+    .qr-panel {
+      background: linear-gradient(180deg, #f3faf9 0%, #ffffff 100%);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 20px 18px;
+      text-align: center;
+    }
+
+    .qr-title {
+      font-size: 0.98rem;
+      font-weight: 800;
+      color: var(--primary-dark);
+      margin-bottom: 4px;
+    }
+
+    .qr-caption {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .qr-frame {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      padding: 10px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 22px rgba(0, 77, 64, 0.08);
+      margin-bottom: 12px;
+    }
+
+    #qrCanvas {
+      display: block;
+      width: 196px;
+      height: 196px;
+      image-rendering: pixelated;
+    }
+
+    .qr-mode-row {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .qr-chip {
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    .qr-chip.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .qr-save-btn {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+      font-weight: 700;
+      font-size: 0.84rem;
+      padding: 9px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .qr-save-btn:hover {
+      background: #cbe9e6;
     }
 
     .section-title {
@@ -356,9 +529,26 @@
       border-top: 1px solid var(--border);
     }
 
+    @media (max-width: 780px) {
+      .hero-layout {
+        grid-template-columns: 1fr;
+      }
+      .hero-main {
+        text-align: center;
+      }
+      .app-header-row {
+        flex-direction: column;
+      }
+      .badge-row,
+      .cta-group,
+      .meta-strip {
+        justify-content: center;
+      }
+    }
+
     @media (max-width: 540px) {
       .hero-card {
-        padding: 28px 18px;
+        padding: 24px 16px;
       }
       .download-btn,
       .secondary-btn {
@@ -378,55 +568,88 @@
 
   <main class="container">
     <section class="hero-card">
-      <div class="app-icon-wrap">
-        <img src="./public/app-icon.png" alt="ShasthoSathi AI App Icon" />
-      </div>
+      <div class="hero-layout">
+        <div class="hero-main">
+          <div id="statusPill" class="status-pill checking">
+            <span class="status-dot"></span>
+            <span id="statusText" data-i18n="statusChecking">Verifying APK package...</span>
+          </div>
 
-      <div class="badge-row">
-        <span class="badge">Android APK</span>
-        <span class="badge">v1.0</span>
-        <span class="badge">Android 7.0+</span>
-        <span class="badge" data-i18n="bilingualBadge">English &amp; বাংলা</span>
-      </div>
+          <div class="app-header-row">
+            <div class="app-icon-wrap">
+              <img src="./public/app-icon.png" alt="ShasthoSathi AI App Icon" />
+            </div>
+            <div>
+              <h1 data-i18n="heroTitle">ShasthoSathi AI</h1>
+              <div class="badge-row">
+                <span class="badge">Android APK</span>
+                <span class="badge">v1.0</span>
+                <span class="badge">Android 7.0+</span>
+                <span class="badge" data-i18n="bilingualBadge">English &amp; বাংলা</span>
+              </div>
+            </div>
+          </div>
 
-      <h1 data-i18n="heroTitle">Download ShasthoSathi AI</h1>
-      <p class="subtitle" data-i18n="heroSubtitle">
-        Your smart bilingual AI health companion — Prescription Scanner, Medicine Alarm with Ringtones, Medical Reports Cloud Vault, AI Command Bot, BMI &amp; Hydration Tracker, and PDF Health Report Export.
-      </p>
+          <p class="subtitle" data-i18n="heroSubtitle">
+            Your smart bilingual AI health companion — Prescription Scanner, Medicine Alarm with Ringtones, Medical Reports Cloud Vault, AI Command Bot, BMI &amp; Hydration Tracker, and PDF Health Report Export.
+          </p>
 
-      <div class="cta-group">
-        <a
-          id="apkDownloadLink"
-          class="download-btn"
-          href="./public/ShasthoSathi-AI.apk"
-          download="ShasthoSathi-AI.apk"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
-          <span data-i18n="downloadBtn">Download APK (33 MB)</span>
-        </a>
+          <div class="cta-group">
+            <button id="apkDownloadBtn" class="download-btn" type="button">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span id="downloadBtnText" data-i18n="downloadBtn">Download APK (32.1 MB)</span>
+            </button>
 
-        <button id="copyLinkBtn" class="secondary-btn" type="button">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-          </svg>
-          <span data-i18n="copyLinkBtn">Copy Download Link</span>
-        </button>
-      </div>
+            <button id="copyLinkBtn" class="secondary-btn" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span data-i18n="copyLinkBtn">Copy Link</span>
+            </button>
+          </div>
 
-      <div class="meta-strip">
-        <span><strong>File:</strong> ShasthoSathi-AI.apk</span>
-        <span><strong>Package:</strong> com.aistudio.shasthosathi.kxmzqr</span>
-        <span><strong>Size:</strong> ~33 MB</span>
-      </div>
+          <div id="progressWrap" class="progress-wrap" aria-live="polite">
+            <div class="progress-top">
+              <span id="progressLabel">Preparing ShasthoSathi-AI.apk...</span>
+              <span id="progressPct">0%</span>
+            </div>
+            <div class="progress-bar-track">
+              <div id="progressBarFill" class="progress-bar-fill"></div>
+            </div>
+          </div>
 
-      <div class="direct-link-box">
-        <span data-i18n="directLinkLabel">Direct APK Link:</span>
-        <a id="directUrlAnchor" href="./public/ShasthoSathi-AI.apk" download="ShasthoSathi-AI.apk">/public/ShasthoSathi-AI.apk</a>
+          <div class="meta-strip">
+            <span><strong>File:</strong> ShasthoSathi-AI.apk</span>
+            <span><strong>Package:</strong> com.aistudio.shasthosathi.kxmzqr</span>
+            <span><strong>Size:</strong> 32.1 MB</span>
+          </div>
+
+          <div class="direct-link-box">
+            <span data-i18n="directLinkLabel">Download Link:</span>
+            <a id="directUrlAnchor" href="./public/ShasthoSathi-AI.apk" download="ShasthoSathi-AI.apk">/public/ShasthoSathi-AI.apk</a>
+          </div>
+        </div>
+
+        <aside class="qr-panel">
+          <div class="qr-title" data-i18n="qrTitle">Scan QR to Download</div>
+          <p class="qr-caption" data-i18n="qrCaption">Point your Android phone camera to open &amp; download ShasthoSathi AI</p>
+
+          <div class="qr-mode-row">
+            <button id="qrModeAuto" class="qr-chip active" type="button" data-i18n="qrAutoMode">Auto-Download</button>
+            <button id="qrModeDirect" class="qr-chip" type="button" data-i18n="qrDirectMode">Direct APK</button>
+          </div>
+
+          <div class="qr-frame">
+            <canvas id="qrCanvas" width="196" height="196" aria-label="QR Code for downloading ShasthoSathi AI APK"></canvas>
+          </div>
+
+          <button id="saveQrBtn" class="qr-save-btn" type="button" data-i18n="saveQrBtn">Download QR Code (PNG)</button>
+        </aside>
       </div>
     </section>
 
@@ -436,7 +659,7 @@
         <div class="step-num">1</div>
         <div>
           <h4 data-i18n="step1Title">Download the APK</h4>
-          <p data-i18n="step1Desc">Tap the "Download APK" button above to save ShasthoSathi-AI.apk onto your Android phone.</p>
+          <p data-i18n="step1Desc">Tap "Download APK" above or scan the QR code with your phone camera to download ShasthoSathi-AI.apk.</p>
         </div>
       </div>
       <div class="step">
@@ -487,6 +710,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <script src="./public/qr.js"></script>
   <script>
     (function () {
       const translations = {
@@ -494,15 +718,26 @@
           brand: "ShasthoSathi AI",
           toggle: "বাংলায় দেখুন",
           bilingualBadge: "English & বাংলা",
-          heroTitle: "Download ShasthoSathi AI",
+          statusChecking: "Verifying APK package...",
+          statusReadyDirect: "APK Ready • 32.1 MB (Direct Download)",
+          statusReadyParts: "APK Ready • 32.1 MB (Verified Fast Package)",
+          statusLocalFile: "Open via Vercel HTTPS URL for live download",
+          statusMissing: "APK files missing on server — deploy public/ folder to Vercel",
+          heroTitle: "ShasthoSathi AI",
           heroSubtitle:
             "Your smart bilingual AI health companion — Prescription Scanner, Medicine Alarm with Ringtones, Medical Reports Cloud Vault, AI Command Bot, BMI & Hydration Tracker, and PDF Health Report Export.",
-          downloadBtn: "Download APK (33 MB)",
-          copyLinkBtn: "Copy Download Link",
-          directLinkLabel: "Direct APK Link:",
+          downloadBtn: "Download APK (32.1 MB)",
+          downloadingBtn: "Downloading APK...",
+          copyLinkBtn: "Copy Link",
+          directLinkLabel: "Download Link:",
+          qrTitle: "Scan QR to Download",
+          qrCaption: "Point your Android phone camera to open & download ShasthoSathi AI",
+          qrAutoMode: "Auto-Download",
+          qrDirectMode: "Direct APK",
+          saveQrBtn: "Download QR Code (PNG)",
           installTitle: "How to Install on Android",
           step1Title: "Download the APK",
-          step1Desc: "Tap the \"Download APK\" button above to save ShasthoSathi-AI.apk onto your Android phone.",
+          step1Desc: "Tap \"Download APK\" above or scan the QR code with your phone camera to download ShasthoSathi-AI.apk.",
           step2Title: "Allow Unknown Apps",
           step2Desc: "Open the downloaded file. If prompted, tap Settings and enable \"Allow from this source\" for your browser.",
           step3Title: "Install & Sign In",
@@ -517,22 +752,36 @@
           feat4Title: "BMI, Hydration & Wellness",
           feat4Desc: "Track BMI, daily water glasses, Bangladeshi diet plans, mood journal, and online Pro Doctors.",
           disclaimer: "Guidance only — Not a medical diagnosis. Always consult a licensed doctor.",
-          copiedToast: "APK download link copied!",
-          startingToast: "Downloading ShasthoSathi-AI.apk..."
+          copiedToast: "Download link copied!",
+          qrSavedToast: "QR Code PNG saved!",
+          startingToast: "Downloading ShasthoSathi-AI.apk...",
+          assembledToast: "ShasthoSathi-AI.apk downloaded! Tap the file to install.",
+          failedToast: "Download failed. Please make sure the public/ folder is deployed to Vercel."
         },
         bn: {
           brand: "স্বাস্থ্যসাথী এআই",
           toggle: "View in English",
           bilingualBadge: "বাংলা ও English",
-          heroTitle: "স্বাস্থ্যসাথী এআই ডাউনলোড করুন",
+          statusChecking: "APK ফাইল যাচাই হচ্ছে...",
+          statusReadyDirect: "APK প্রস্তুত • ৩২.১ MB (সরাসরি ডাউনলোড)",
+          statusReadyParts: "APK প্রস্তুত • ৩২.১ MB (ভেরিফায়েড প্যাকেজ)",
+          statusLocalFile: "লাইভ ডাউনলোডের জন্য Vercel HTTPS লিংক খুলুন",
+          statusMissing: "সার্ভারে APK ফাইল পাওয়া যায়নি — public/ ফোল্ডার Vercel-এ ডিপ্লয় করুন",
+          heroTitle: "স্বাস্থ্যসাথী এআই",
           heroSubtitle:
             "আপনার স্মার্ট এআই স্বাস্থ্যসাথী — প্রেসক্রিপশন স্ক্যানার, রিংটোনসহ ওষুধের অ্যালার্ম, মেডিকেল রিপোর্ট ভল্ট, এআই কমান্ড বট, বিএমআই ও পানি ট্র্যাকার এবং PDF রিপোর্ট এক্সপোর্ট।",
-          downloadBtn: "APK ডাউনলোড করুন (৩৩ MB)",
-          copyLinkBtn: "ডাউনলোড লিংক কপি করুন",
-          directLinkLabel: "সরাসরি APK লিংক:",
+          downloadBtn: "APK ডাউনলোড করুন (৩২.১ MB)",
+          downloadingBtn: "APK ডাউনলোড হচ্ছে...",
+          copyLinkBtn: "লিংক কপি করুন",
+          directLinkLabel: "ডাউনলোড লিংক:",
+          qrTitle: "QR কোড স্ক্যান করে ডাউনলোড করুন",
+          qrCaption: "ফোনের ক্যামেরা দিয়ে স্ক্যান করলেই ShasthoSathi AI ডাউনলোড শুরু হবে",
+          qrAutoMode: "অটো ডাউনলোড",
+          qrDirectMode: "সরাসরি APK",
+          saveQrBtn: "QR কোড সেভ করুন (PNG)",
           installTitle: "অ্যান্ড্রয়েড ফোনে ইনস্টল করার নিয়ম",
           step1Title: "APK ফাইল ডাউনলোড করুন",
-          step1Desc: "উপরের \"APK ডাউনলোড করুন\" বাটনে ট্যাপ করে আপনার ফোনে ShasthoSathi-AI.apk সেভ করুন।",
+          step1Desc: "উপরের \"APK ডাউনলোড করুন\" বাটনে ট্যাপ করুন অথবা QR কোড স্ক্যান করে ShasthoSathi-AI.apk সেভ করুন।",
           step2Title: "Unknown Apps অনুমতি দিন",
           step2Desc: "ডাউনলোড হওয়া ফাইলে ট্যাপ করুন। অনুমতি চাইলে Settings-এ গিয়ে \"Allow from this source\" চালু করুন।",
           step3Title: "ইনস্টল ও সাইন ইন করুন",
@@ -547,26 +796,36 @@
           feat4Title: "বিএমআই, পানি ও ওয়েলনেস",
           feat4Desc: "বিএমআই হিসাব, দৈনিক পানি পান, বাংলাদেশি ডায়েট প্ল্যান, মুড জার্নাল এবং অনলাইন ডাক্তার বুকিং।",
           disclaimer: "শুধুমাত্র নির্দেশনা — এটি কোনো রোগ নির্ণয় নয়। সর্বদা নিবন্ধিত ডাক্তারের পরামর্শ নিন।",
-          copiedToast: "APK ডাউনলোড লিংক কপি হয়েছে!",
-          startingToast: "ShasthoSathi-AI.apk ডাউনলোড শুরু হচ্ছে..."
+          copiedToast: "ডাউনলোড লিংক কপি হয়েছে!",
+          qrSavedToast: "QR কোড PNG সেভ হয়েছে!",
+          startingToast: "ShasthoSathi-AI.apk ডাউনলোড শুরু হচ্ছে...",
+          assembledToast: "ShasthoSathi-AI.apk ডাউনলোড সম্পন্ন! ইনস্টল করতে ফাইলে ট্যাপ করুন।",
+          failedToast: "ডাউনলোড ব্যর্থ হয়েছে। অনুগ্রহ করে public/ ফোল্ডারসহ Vercel-এ ডিপ্লয় করুন।"
         }
       };
 
       let lang = "en";
+      let qrMode = "auto";
+      let resolvedSource = null;
+      let isDownloading = false;
+
       const langToggle = document.getElementById("langToggle");
       const copyLinkBtn = document.getElementById("copyLinkBtn");
-      const downloadLink = document.getElementById("apkDownloadLink");
+      const downloadBtn = document.getElementById("apkDownloadBtn");
+      const downloadBtnText = document.getElementById("downloadBtnText");
       const directUrlAnchor = document.getElementById("directUrlAnchor");
+      const statusPill = document.getElementById("statusPill");
+      const statusText = document.getElementById("statusText");
+      const progressWrap = document.getElementById("progressWrap");
+      const progressLabel = document.getElementById("progressLabel");
+      const progressPct = document.getElementById("progressPct");
+      const progressBarFill = document.getElementById("progressBarFill");
+      const qrCanvas = document.getElementById("qrCanvas");
+      const qrModeAuto = document.getElementById("qrModeAuto");
+      const qrModeDirect = document.getElementById("qrModeDirect");
+      const saveQrBtn = document.getElementById("saveQrBtn");
       const toast = document.getElementById("toast");
       let toastTimer = null;
-
-      function getFullApkUrl() {
-        return new URL(downloadLink.getAttribute("href"), window.location.href).href;
-      }
-
-      if (window.location.protocol.startsWith("http")) {
-        directUrlAnchor.textContent = getFullApkUrl();
-      }
 
       function showToast(msg) {
         toast.textContent = msg;
@@ -574,7 +833,223 @@
         clearTimeout(toastTimer);
         toastTimer = setTimeout(function () {
           toast.classList.remove("show");
-        }, 2600);
+        }, 3000);
+      }
+
+      function getPageBaseUrl() {
+        const u = new URL(window.location.href);
+        u.search = "";
+        u.hash = "";
+        return u.href;
+      }
+
+      function getShareUrl() {
+        if (!window.location.protocol.startsWith("http")) {
+          return "https://shasthosathi-ai.vercel.app/?download=1";
+        }
+        if (qrMode === "direct" && resolvedSource && resolvedSource.mode === "direct") {
+          return new URL(resolvedSource.url, window.location.href).href;
+        }
+        return getPageBaseUrl() + "?download=1";
+      }
+
+      function renderQr() {
+        if (!window.ShasthoQR) return;
+        const targetUrl = getShareUrl();
+        try {
+          window.ShasthoQR.renderToCanvas(qrCanvas, targetUrl, {
+            size: 240,
+            quietZone: 4,
+            fg: "#004d40",
+            bg: "#ffffff"
+          });
+        } catch (err) {
+          console.error("QR render error:", err);
+        }
+      }
+
+      function updateStatusUi() {
+        const dict = translations[lang];
+        statusPill.classList.remove("checking", "warn");
+        if (!resolvedSource) {
+          statusPill.classList.add("checking");
+          statusText.textContent = dict.statusChecking;
+          return;
+        }
+        if (resolvedSource.mode === "direct") {
+          statusText.textContent = dict.statusReadyDirect;
+          const absUrl = new URL(resolvedSource.url, window.location.href).href;
+          directUrlAnchor.href = resolvedSource.url;
+          directUrlAnchor.textContent = absUrl;
+        } else if (resolvedSource.mode === "parts") {
+          statusText.textContent = dict.statusReadyParts;
+          const shareLink = getPageBaseUrl() + "?download=1";
+          directUrlAnchor.href = shareLink;
+          directUrlAnchor.removeAttribute("download");
+          directUrlAnchor.textContent = shareLink;
+        } else if (resolvedSource.mode === "file_protocol") {
+          statusPill.classList.add("warn");
+          statusText.textContent = dict.statusLocalFile;
+        } else {
+          statusPill.classList.add("warn");
+          statusText.textContent = dict.statusMissing;
+        }
+        renderQr();
+      }
+
+      async function probeDirectUrl(url) {
+        try {
+          const res = await fetch(url, { method: "HEAD", cache: "no-store" });
+          if (!res.ok) return false;
+          const ct = (res.headers.get("content-type") || "").toLowerCase();
+          if (ct.includes("text/html")) return false;
+          const cl = parseInt(res.headers.get("content-length") || "0", 10);
+          return cl === 0 || cl > 1000000;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      async function probePartsManifest(manifestUrl) {
+        try {
+          const res = await fetch(manifestUrl, { cache: "no-store" });
+          if (!res.ok) return null;
+          const ct = (res.headers.get("content-type") || "").toLowerCase();
+          if (ct.includes("text/html")) return null;
+          const manifest = await res.json();
+          if (!manifest || !Array.isArray(manifest.parts) || manifest.parts.length === 0) {
+            return null;
+          }
+          const baseUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf("/") + 1);
+          const firstRes = await fetch(baseUrl + manifest.parts[0].name, {
+            method: "HEAD",
+            cache: "no-store"
+          });
+          if (!firstRes.ok) return null;
+          const firstCt = (firstRes.headers.get("content-type") || "").toLowerCase();
+          if (firstCt.includes("text/html")) return null;
+          return { mode: "parts", baseUrl: baseUrl, manifest: manifest };
+        } catch (_) {
+          return null;
+        }
+      }
+
+      async function detectApkSource() {
+        if (!window.location.protocol.startsWith("http")) {
+          resolvedSource = { mode: "file_protocol", url: "./public/ShasthoSathi-AI.apk" };
+          updateStatusUi();
+          return resolvedSource;
+        }
+
+        const directCandidates = [
+          "./public/ShasthoSathi-AI.apk",
+          "/public/ShasthoSathi-AI.apk",
+          "./ShasthoSathi-AI.apk",
+          "/ShasthoSathi-AI.apk"
+        ];
+        for (let i = 0; i < directCandidates.length; i++) {
+          if (await probeDirectUrl(directCandidates[i])) {
+            resolvedSource = { mode: "direct", url: directCandidates[i] };
+            updateStatusUi();
+            return resolvedSource;
+          }
+        }
+
+        const manifestCandidates = [
+          "./public/apk-parts/manifest.json",
+          "/public/apk-parts/manifest.json",
+          "./apk-parts/manifest.json",
+          "/apk-parts/manifest.json"
+        ];
+        for (let i = 0; i < manifestCandidates.length; i++) {
+          const found = await probePartsManifest(manifestCandidates[i]);
+          if (found) {
+            resolvedSource = found;
+            updateStatusUi();
+            return resolvedSource;
+          }
+        }
+
+        resolvedSource = { mode: "missing" };
+        updateStatusUi();
+        return resolvedSource;
+      }
+
+      function triggerBrowserDownload(href, fileName) {
+        const a = document.createElement("a");
+        a.href = href;
+        a.download = fileName;
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+
+      async function startApkDownload() {
+        if (isDownloading) return;
+        const src = resolvedSource || (await detectApkSource());
+        const dict = translations[lang];
+
+        if (src.mode === "direct" || src.mode === "file_protocol") {
+          showToast(dict.startingToast);
+          triggerBrowserDownload(src.url, "ShasthoSathi-AI.apk");
+          return;
+        }
+
+        if (src.mode === "parts") {
+          isDownloading = true;
+          downloadBtn.disabled = true;
+          downloadBtnText.textContent = dict.downloadingBtn;
+          progressWrap.classList.add("active");
+          progressBarFill.style.width = "4%";
+          progressPct.textContent = "0%";
+          progressLabel.textContent = "Downloading ShasthoSathi-AI.apk...";
+
+          try {
+            const parts = src.manifest.parts;
+            const totalBytes = src.manifest.totalBytes || parts.reduce(function (s, p) { return s + (p.size || 0); }, 0);
+            const buffers = [];
+            let loadedBytes = 0;
+
+            for (let i = 0; i < parts.length; i++) {
+              const part = parts[i];
+              progressLabel.textContent =
+                (lang === "bn" ? "ডাউনলোড হচ্ছে অংশ " : "Downloading part ") +
+                (i + 1) + "/" + parts.length + "...";
+              const resp = await fetch(src.baseUrl + part.name, { cache: "no-store" });
+              if (!resp.ok) throw new Error("Part " + (i + 1) + " HTTP " + resp.status);
+              const buf = await resp.arrayBuffer();
+              buffers.push(buf);
+              loadedBytes += buf.byteLength;
+              const pct = Math.min(99, Math.round((loadedBytes / totalBytes) * 100));
+              progressBarFill.style.width = pct + "%";
+              progressPct.textContent = pct + "%";
+            }
+
+            const blob = new Blob(buffers, { type: "application/vnd.android.package-archive" });
+            const blobUrl = URL.createObjectURL(blob);
+            progressBarFill.style.width = "100%";
+            progressPct.textContent = "100%";
+            progressLabel.textContent = lang === "bn" ? "সম্পন্ন! সেভ হচ্ছে..." : "Complete! Saving APK...";
+            triggerBrowserDownload(blobUrl, src.manifest.fileName || "ShasthoSathi-AI.apk");
+            showToast(dict.assembledToast);
+            setTimeout(function () {
+              URL.revokeObjectURL(blobUrl);
+              progressWrap.classList.remove("active");
+            }, 6000);
+          } catch (err) {
+            console.error(err);
+            showToast(dict.failedToast);
+            progressWrap.classList.remove("active");
+          } finally {
+            isDownloading = false;
+            downloadBtn.disabled = false;
+            downloadBtnText.textContent = translations[lang].downloadBtn;
+          }
+          return;
+        }
+
+        showToast(dict.failedToast);
       }
 
       function applyLanguage(nextLang) {
@@ -588,18 +1063,24 @@
             el.textContent = dict[key];
           }
         });
+        updateStatusUi();
       }
 
       langToggle.addEventListener("click", function () {
         applyLanguage(lang === "en" ? "bn" : "en");
       });
 
-      downloadLink.addEventListener("click", function () {
-        showToast(translations[lang].startingToast);
+      downloadBtn.addEventListener("click", startApkDownload);
+
+      directUrlAnchor.addEventListener("click", function (e) {
+        if (resolvedSource && resolvedSource.mode === "parts") {
+          e.preventDefault();
+          startApkDownload();
+        }
       });
 
       copyLinkBtn.addEventListener("click", function () {
-        const url = getFullApkUrl();
+        const url = getShareUrl();
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(url).then(function () {
             showToast(translations[lang].copiedToast);
@@ -612,6 +1093,34 @@
           document.execCommand("copy");
           document.body.removeChild(input);
           showToast(translations[lang].copiedToast);
+        }
+      });
+
+      qrModeAuto.addEventListener("click", function () {
+        qrMode = "auto";
+        qrModeAuto.classList.add("active");
+        qrModeDirect.classList.remove("active");
+        renderQr();
+      });
+
+      qrModeDirect.addEventListener("click", function () {
+        qrMode = "direct";
+        qrModeDirect.classList.add("active");
+        qrModeAuto.classList.remove("active");
+        renderQr();
+      });
+
+      saveQrBtn.addEventListener("click", function () {
+        const pngUrl = qrCanvas.toDataURL("image/png");
+        triggerBrowserDownload(pngUrl, "ShasthoSathi-AI-QR.png");
+        showToast(translations[lang].qrSavedToast);
+      });
+
+      renderQr();
+      detectApkSource().then(function (src) {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("download") === "1" && (src.mode === "direct" || src.mode === "parts")) {
+          startApkDownload();
         }
       });
     })();

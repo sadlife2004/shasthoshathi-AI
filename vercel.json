@@ -3,6 +3,24 @@
   "framework": null,
   "outputDirectory": "public",
   "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/public/ShasthoSathi-AI.apk",
+      "destination": "/ShasthoSathi-AI.apk"
+    },
+    {
+      "source": "/public/apk-parts/:path*",
+      "destination": "/apk-parts/:path*"
+    },
+    {
+      "source": "/public/app-icon.png",
+      "destination": "/app-icon.png"
+    },
+    {
+      "source": "/public/qr.js",
+      "destination": "/qr.js"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)\\.apk",
@@ -18,6 +36,19 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/apk-parts/(.*)\\.bin",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/octet-stream"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
         }
       ]
     }
